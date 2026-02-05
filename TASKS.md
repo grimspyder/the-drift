@@ -39,7 +39,8 @@
 - Placeholder tileset
 **Agent:** Coding Agent
 **Dependencies:** 1.2
-**Status:** ⏳ Blocked by 1.2
+**Status:** ✅ COMPLETE - Finished 2026-02-05 23:50 UTC
+**Commit:** `65996eb` - feat: Add static level layout with TileMap
 
 **Task 2.2: Procedural Generation**
 - DungeonGenerator node
@@ -181,7 +182,7 @@
 |------|--------|----------|-----|
 | 1.1 Project Setup | ✅ Complete | - | Day 1 |
 | 1.2 Player Controller | ⏳ Ready | - | Day 2-3 |
-| 2.1 Static Level | ⏳ Blocked | - | Day 4-5 |
+| 2.1 Static Level | ✅ Complete | - | Day 4-5 |
 | 2.2 Procedural Gen | ⏳ Blocked | - | Day 6 |
 | 3.1 Combat System | ⏳ Blocked | - | Day 7-9 |
 | 3.2 Drift Mechanic | ⏳ Blocked | - | Day 10 |
