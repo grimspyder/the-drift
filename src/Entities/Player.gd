@@ -49,6 +49,11 @@ func _ready() -> void:
 		collision_shape.shape = shape
 		collision_shape.position = Vector2.ZERO
 		add_child(collision_shape)
+	
+	# Set up physics layers
+	# Layer 1: Player, Layer 2: Walls
+	collision_layer = 1  # Player is on layer 1
+	collision_mask = 2   # Player collides with walls on layer 2
 
 	# Create and setup camera
 	camera = Camera2D.new()
