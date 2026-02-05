@@ -27,8 +27,9 @@ Create MVP beta of The Drift - a roguelike game with "Many Worlds" death mechani
 
 ### Status
 **Phase:** Development  
-**Current Task:** 1.1 Project Setup (Coding Agent active)  
-**Next Milestone:** Task 1.1 completion → Task 1.2 Player Controller
+**Current Task:** 1.2 Player Controller (Coding Agent active)  
+**Last Completed:** 1.1 Project Setup ✅
+**Next Milestone:** Task 1.2 completion → Task 2.1 Static Level
 
 ### Key Decisions Pending
 - [ ] Exact MVP feature scope
