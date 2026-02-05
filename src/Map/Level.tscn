@@ -6,6 +6,15 @@
 [node name="Level" type="Node2D"]
 script = ExtResource("1_level")
 
+[node name="DungeonGenerator" type="Node2D" parent="."]
+script = null
+tile_map_path = NodePath("../TileMap")
+map_width = 80
+map_height = 45
+min_room_size = 6
+max_room_size = 10
+target_room_count = 30
+
 [node name="TileMap" type="TileMap" parent="."]
 tile_set = ExtResource("2_tileset")
 format = 2
