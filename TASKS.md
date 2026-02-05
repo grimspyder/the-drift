@@ -49,7 +49,8 @@
 - Seed-based generation
 **Agent:** Coding Agent
 **Dependencies:** 2.1
-**Status:** ⏳ Blocked by 2.1
+**Status:** ✅ COMPLETE - Finished 2026-02-06
+**Commit:** `b388ecd` - feat: Implement procedural dungeon generation with DungeonGenerator
 
 ---
 
@@ -183,7 +184,7 @@
 | 1.1 Project Setup | ✅ Complete | - | Day 1 |
 | 1.2 Player Controller | ⏳ Ready | - | Day 2-3 |
 | 2.1 Static Level | ✅ Complete | - | Day 4-5 |
-| 2.2 Procedural Gen | ⏳ Blocked | - | Day 6 |
+| 2.2 Procedural Gen | ✅ Complete | - | Day 6 |
 | 3.1 Combat System | ⏳ Blocked | - | Day 7-9 |
 | 3.2 Drift Mechanic | ⏳ Blocked | - | Day 10 |
 | 4.1 World Themes | ⏳ Blocked | - | Day 11-12 |
@@ -199,8 +200,10 @@
 
 ## Next Actions
 1. ✅ Task 1.1 Complete - Godot project initialized
-2. ⏳ Spawn Coding Agent for Task 1.2 (Player Controller)
-3. ⏳ Continue with Phase 2 when ready
+2. ✅ Task 1.2 Complete - Player controller implemented
+3. ✅ Task 2.1 Complete - Static level layout added
+4. ✅ Task 2.2 Complete - Procedural dungeon generation implemented
+5. ⏳ Spawn Coding Agent for Task 3.1 (Combat System)
 
 ---
 
