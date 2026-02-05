@@ -1,0 +1,33 @@
+# Godot 4 ignores
+.godot/
+*.translation
+.import/
+
+# Imported assets (ignore the actual files, keep the import metadata)
+.import/
+
+# Export files (when exporting from editor)
+*.pck
+*.exe
+*.dll
+*.x86_64
+*.arm64
+*.apk
+*.aab
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+*.code-workspace
+*.sublime-*
+
+# Backup/swap
+*~
+*.swp
+*.swo
+
+# Custom
+USER://
