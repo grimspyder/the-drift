@@ -34,6 +34,12 @@ var _tile_map: TileMap
 var _rng: RandomNumberGenerator
 var _rooms: Array[Dictionary] = []
 
+## Exit stairs instance
+var _exit_stairs: Node2D
+
+## Tile size (32x32 pixels)
+const TILE_SIZE: int = 32
+
 # -------------------------------------------------------------------------
 # Room Class
 # -------------------------------------------------------------------------
@@ -134,6 +140,182 @@ func clear_dungeon() -> void:
 	"""Clear all tiles from the dungeon"""
 	_clear_tilemap()
 	_rooms.clear()
+	
+	# Remove exit stairs if present
+	if _exit_stairs and is_instance_valid(_exit_stairs):
+		_exit_stairs.queue_free()
+		_exit_stairs = null
+
+
+# -------------------------------------------------------------------------
+# Exit Stairs Placement
+# -------------------------------------------------------------------------
+
+func get_furthest_room_center() -> Vector2:
+	"""Get the center position of the furthest room from the start"""
+	if _rooms.is_empty():
+		return Vector2(map_width * TILE_SIZE / 2, map_height * TILE_SIZE / 2)
+	
+	var start_room = _rooms[0]
+	var start_pos = Vector2(start_room.center.x * TILE_SIZE, start_room.center.y * TILE_SIZE)
+	
+	var furthest_room = _rooms[0]
+	var max_distance = 0.0
+	
+	for room in _rooms:
+		var room_pos = Vector2(room.center.x * TILE_SIZE, room.center.y * TILE_SIZE)
+		var distance = start_pos.distance_to(room_pos)
+		
+		if distance > max_distance:
+			max_distance = distance
+			furthest_room = room
+	
+	return Vector2(furthest_room.center.x * TILE_SIZE, furthest_room.center.y * TILE_SIZE)
+
+
+func get_furthest_rooms_sorted() -> Array:
+	"""Get all rooms sorted by distance from start (furthest first)"""
+	if _rooms.is_empty():
+		return []
+	
+	var start_room = _rooms[0]
+	var start_pos = Vector2(start_room.center.x * TILE_SIZE, start_room.center.y * TILE_SIZE)
+	
+	# Create array of rooms with their distances
+	var rooms_with_distance = []
+	for room in _rooms:
+		var room_pos = Vector2(room.center.x * TILE_SIZE, room.center.y * TILE_SIZE)
+		var distance = start_pos.distance_to(room_pos)
+		rooms_with_distance.append({
+			"room": room,
+			"distance": distance,
+			"center_pos": room_pos
+		})
+	
+	# Sort by distance (furthest first)
+	rooms_with_distance.sort_custom(func(a, b): return a.distance > b.distance)
+	
+	return rooms_with_distance
+
+
+func place_exit_stairs() -> Vector2:
+	"""Place exit stairs in the furthest reachable room from start"""
+	print("DungeonGenerator: Placing exit stairs...")
+	
+	if _rooms.is_empty():
+		print("DungeonGenerator: No rooms to place stairs!")
+		return Vector2(map_width * TILE_SIZE / 2, map_height * TILE_SIZE / 2)
+	
+	# Get rooms sorted by distance from start
+	var sorted_rooms = get_furthest_rooms_sorted()
+	
+	for room_data in sorted_rooms:
+		var room = room_data.room
+		var center_pos = room_data.center_pos
+		
+		# Check if path exists from player start to this room
+		if _verify_path_exists(center_pos):
+			# Place stairs at center of this room
+			_spawn_exit_stairs(center_pos)
+			print("DungeonGenerator: Exit stairs placed at room ", room_data)
+			return center_pos
+	
+	# Fallback: Place in first room if no path found
+	print("DungeonGenerator: No reachable room found for stairs!")
+	_spawn_exit_stairs(sorted_rooms[0].center_pos)
+	return sorted_rooms[0].center_pos
+
+
+func _spawn_exit_stairs(position: Vector2) -> void:
+	"""Spawn the exit stairs instance at the given position"""
+	# Load exit stairs scene
+	var stairs_scene = load("res://src/Map/ExitStairs.tscn")
+	if stairs_scene:
+		_exit_stairs = stairs_scene.instantiate()
+		
+		# Add to parent (Level node)
+		var parent = get_parent()
+		if parent:
+			parent.add_child(_exit_stairs)
+			_exit_stairs.global_position = position
+			
+			# Register with GameManager
+			var game_manager = get_node_or_null("/root/GameManager")
+			if game_manager:
+				game_manager.register_exit_stairs(_exit_stairs)
+			
+			print("DungeonGenerator: Exit stairs spawned at ", position)
+	else:
+		push_error("DungeonGenerator: Failed to load ExitStairs scene!")
+
+
+func _verify_path_exists(target_pos: Vector2) -> bool:
+	"""Verify that a path exists from player start to target position"""
+	if _rooms.is_empty():
+		return false
+	
+	var start_pos = _rooms[0].center
+	
+	# Simple BFS path check through connected rooms
+	var visited = {}
+	var queue = [start_pos]
+	visited[start_pos] = true
+	
+	while queue.size() > 0:
+		var current = queue.pop_front()
+		
+		# Check if we reached the target room
+		var current_pos = Vector2(current.x * TILE_SIZE, current.y * TILE_SIZE)
+		if current_pos.distance_to(target_pos) < TILE_SIZE * 2:
+			return true
+		
+		# Find connected rooms
+		for room in _rooms:
+			if not visited.has(room.center):
+				# Check if rooms are connected (adjacent in room list or through tunnels)
+				if _are_rooms_connected(current, room.center):
+					visited[room.center] = true
+					queue.append(room.center)
+	
+	return false
+
+
+func _are_rooms_connected(pos1: Vector2i, pos2: Vector2i) -> bool:
+	"""Check if two room centers are connected through adjacent rooms"""
+	# Simple check: rooms are connected if they're in the same connected component
+	# This works because we generate rooms in order and connect i to i+1
+	if _rooms.size() < 2:
+		return false
+	
+	# Find room indices
+	var index1 = -1
+	var index2 = -1
+	
+	for i in range(_rooms.size()):
+		if _rooms[i].center == pos1:
+			index1 = i
+		if _rooms[i].center == pos2:
+			index2 = i
+	
+	if index1 == -1 or index2 == -1:
+		return false
+	
+	# Rooms are connected if they're in the same connected chain
+	# Since we connect rooms in sequence, check if they're within range
+	var min_index = mini(index1, index2)
+	var max_index = maxi(index1, index2)
+	
+	# Check if all rooms between them exist (they should be connected)
+	for i in range(min_index, max_index):
+		if i >= _rooms.size() - 1:
+			return false
+	
+	return true
+
+
+func get_exit_stairs() -> Node2D:
+	"""Get the current exit stairs instance"""
+	return _exit_stairs
 
 
 # -------------------------------------------------------------------------

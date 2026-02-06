@@ -42,6 +42,18 @@ var _drift_transition_timer: float = 0.0
 ## Duration of drift transition
 const DRIFT_TRANSITION_DURATION: float = 1.5
 
+## Enemy kill counter
+var enemies_killed: int = 0
+
+## Exit stairs reference
+var _exit_stairs: Node2D
+
+## Win screen instance
+var _win_screen: Control
+
+## Whether game has been won
+var game_won: bool = false
+
 
 func _ready() -> void:
 	# This should be set as an autoload in project.godot
@@ -63,8 +75,10 @@ func initialize_game() -> void:
 	drift_count = 0
 	session_time = 0.0
 	session_seed = randi()
+	enemies_killed = 0
 	game_active = true
 	is_driftging = false
+	game_won = false
 	print("GameManager: Game initialized")
 	print("GameManager: Session seed: ", session_seed)
 
@@ -211,6 +225,100 @@ func _respawn_player() -> void:
 		_player.global_position = spawn_pos
 		_player.reset_player()
 		print("GameManager: Player respawned at ", spawn_pos)
+
+
+# -------------------------------------------------------------------------
+# Enemy Kill Tracking
+# -------------------------------------------------------------------------
+
+func register_enemy_kill() -> void:
+	"""Register an enemy kill"""
+	enemies_killed += 1
+	print("GameManager: Enemy killed! Total: ", enemies_killed)
+
+
+func get_enemy_kills() -> int:
+	"""Get total enemy kills"""
+	return enemies_killed
+
+
+func reset_enemy_kills() -> void:
+	"""Reset enemy kill counter"""
+	enemies_killed = 0
+
+
+# -------------------------------------------------------------------------
+# Win Condition
+# -------------------------------------------------------------------------
+
+func register_exit_stairs(stairs: Node2D) -> void:
+	"""Register exit stairs reference"""
+	_exit_stairs = stairs
+	if stairs and stairs.has_signal("stairs_entered"):
+		stairs.stairs_entered.connect(_on_stairs_entered)
+	print("GameManager: Exit stairs registered")
+
+
+func _on_stairs_entered() -> void:
+	"""Handle player reaching exit stairs - trigger win condition"""
+	if not game_active or game_won:
+		return
+	
+	print("GameManager: Player reached exit! Triggering win...")
+	game_won = true
+	game_active = false
+	
+	# Show win screen
+	_show_win_screen()
+
+
+func _show_win_screen() -> void:
+	"""Display win screen with statistics"""
+	print("=")
+	print("VICTORY!")
+	print("=")
+	print("Congratulations! You escaped The Drift!")
+	print("Total drifts survived: ", drift_count)
+	print("Enemies defeated: ", enemies_killed)
+	print("Session time: ", get_session_formatted())
+	print("Worlds explored: ", world_id + 1)
+	print("=")
+	
+	# Load and show win screen
+	var win_screen_scene = load("res://src/UI/WinScreen.tscn")
+	if win_screen_scene:
+		_win_screen = win_screen_scene.instantiate()
+		get_tree().current_scene.add_child(_win_screen)
+		
+		# Set statistics
+		_win_screen.set_stats(
+			get_session_formatted(),
+			drift_count,
+			enemies_killed
+		)
+		
+		# Show with animation
+		_win_screen.show_victory()
+		
+		print("WinScreen: Victory screen displayed")
+
+
+func win_game() -> void:
+	"""Force win condition (for testing or special events)"""
+	if not game_active or game_won:
+		return
+	_on_stairs_entered()
+
+
+# -------------------------------------------------------------------------
+# Game State Helpers
+# -------------------------------------------------------------------------
+
+func get_session_formatted() -> String:
+	"""Get formatted session time string"""
+	var minutes = int(session_time) / 60
+	var seconds = int(session_time) % 60
+	return "%02d:%02d" % [minutes, seconds]
 
 
 func game_over(reason: String) -> void:

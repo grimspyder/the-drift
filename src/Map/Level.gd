@@ -62,6 +62,12 @@ func generate_level(new_seed: int = 0) -> void:
 	# Delegate to DungeonGenerator
 	dungeon_generator.generate_dungeon(_level_seed)
 	
+	# Place exit stairs (only in world 0 for dungeon completion)
+	var game_manager = get_node_or_null("/root/GameManager")
+	var is_world_zero = game_manager and game_manager.world_id == 0
+	if is_world_zero:
+		_place_exit_stairs()
+	
 	# Apply theme colors
 	_apply_theme_to_tilemap()
 	
@@ -83,6 +89,13 @@ func regenerate_level_with_seed(new_seed: int) -> void:
 	_current_theme = _theme_db.get_theme_for_world_id(get_parent().world_id if get_parent() else 0)
 	
 	dungeon_generator.generate_dungeon(_level_seed)
+	
+	# Place exit stairs only in world 0
+	var game_manager = get_node_or_null("/root/GameManager")
+	var is_world_zero = game_manager and game_manager.world_id == 0
+	if is_world_zero:
+		_place_exit_stairs()
+	
 	_apply_theme_to_tilemap()
 	
 	print("Level: Regenerated with seed ", _level_seed, " and theme ", _current_theme.display_name)
@@ -185,3 +198,16 @@ func is_easy_mode() -> bool:
 	if _current_theme:
 		return _current_theme.is_easy_mode
 	return false
+
+
+# -------------------------------------------------------------------------
+# Exit Stairs Placement
+# -------------------------------------------------------------------------
+
+func _place_exit_stairs() -> void:
+	"""Place exit stairs in the dungeon for completing the level"""
+	if dungeon_generator and dungeon_generator.has_method("place_exit_stairs"):
+		var stairs_pos = dungeon_generator.place_exit_stairs()
+		print("Level: Exit stairs placed at ", stairs_pos)
+	else:
+		print("Level: Failed to place exit stairs - DungeonGenerator method not available")

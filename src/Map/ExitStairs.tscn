@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://drift_exit_stairs"]
+
+[ext_resource type="Script" path="res://src/Map/ExitStairs.gd" id="1_stairs"]
+
+[node name="ExitStairs" type="Area2D"]
+script = ExtResource("1_stairs")

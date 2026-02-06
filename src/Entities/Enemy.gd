@@ -167,6 +167,11 @@ func _attack_player() -> void:
 
 
 func _on_died() -> void:
+	# Register enemy kill with GameManager
+	var game_manager = get_node_or_null("/root/GameManager")
+	if game_manager and game_manager.has_method("register_enemy_kill"):
+		game_manager.register_enemy_kill()
+	
 	# Create death effect (particles could go here)
 	# Hide sprite
 	if sprite:
