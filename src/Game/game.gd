@@ -100,8 +100,17 @@ func setup_entities() -> void:
 func setup_ui() -> void:
 	ui_node = CanvasLayer.new()
 	ui_node.name = "UI"
+	ui_node.layer = 100  # Render on top of everything
 	add_child(ui_node)
-	# HUD, menus, etc. will be added to UI layer
+	
+	# Instantiate and add HUD
+	var hud_scene = load("res://src/UI/HUD.tscn")
+	if hud_scene:
+		var hud = hud_scene.instantiate()
+		ui_node.add_child(hud)
+		print("HUD loaded successfully")
+	else:
+		push_error("Failed to load HUD scene!")
 
 
 # -------------------------------------------------------------------------
