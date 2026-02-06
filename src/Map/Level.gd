@@ -7,7 +7,7 @@ extends Node2D
 @onready var dungeon_generator: Node2D = $DungeonGenerator
 
 ## TileMap reference (accessible via DungeonGenerator)
-@onready var tile_map: TileMap = $DungeonGenerator/TileMap
+@onready var tile_map: TileMap = $TileMap
 
 ## Seed for level generation
 var _level_seed: int = 0
@@ -45,14 +45,14 @@ func _create_transition_overlay() -> void:
 	# Add to canvas layer for proper rendering
 	var canvas_layer = CanvasLayer.new()
 	canvas_layer.add_child(_transition_overlay)
-	get_tree().current_scene.add_child(canvas_layer)
+	get_tree().current_scene.add_child.call_deferred(canvas_layer)
 
 
 func generate_level(new_seed: int = 0) -> void:
 	"""Generate a new level with optional seed"""
 	_level_seed = new_seed
 	if _level_seed == 0:
-		_level_seed = randi()  # Random seed if none provided
+		_level_seed = randi() # Random seed if none provided
 	
 	print("Level: Generating with seed ", _level_seed)
 	

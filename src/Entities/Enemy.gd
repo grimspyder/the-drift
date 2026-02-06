@@ -1,4 +1,5 @@
 extends CharacterBody2D
+class_name Enemy
 
 ## Enemy - Basic enemy with chase AI
 ## Moves toward player when in range and deals damage on contact
@@ -61,7 +62,7 @@ func _ready() -> void:
 		sprite = Sprite2D.new()
 		var placeholder_texture = _create_enemy_texture()
 		sprite.texture = placeholder_texture
-		sprite.scale = Vector2(0.5, 0.5)  # 32x32 equivalent
+		sprite.scale = Vector2(0.5, 0.5) # 32x32 equivalent
 		sprite.position = Vector2.ZERO
 		add_child(sprite)
 	
@@ -69,15 +70,15 @@ func _ready() -> void:
 	if collision_shape == null:
 		collision_shape = CollisionShape2D.new()
 		var shape = CircleShape2D.new()
-		shape.radius = 16  # Match sprite size
+		shape.radius = 16 # Match sprite size
 		collision_shape.shape = shape
 		collision_shape.position = Vector2.ZERO
 		add_child(collision_shape)
 	
 	# Set up physics layers
 	# Layer 1: Player, Layer 2: Walls
-	collision_layer = 8   # Enemy layer (layer 4)
-	collision_mask = 3    # Collides with player (1) + walls (2)
+	collision_layer = 8 # Enemy layer (layer 4)
+	collision_mask = 3 # Collides with player (1) + walls (2)
 	
 	# Apply difficulty scaling based on drift count
 	_apply_difficulty_scaling()
@@ -87,14 +88,14 @@ func _ready() -> void:
 	damage_label.name = "DamageLabel"
 	damage_label.position = Vector2(0, -30)
 	damage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	damage_label.modulate = Color(1, 0.3, 0.3)  # Red text
+	damage_label.modulate = Color(1, 0.3, 0.3) # Red text
 	add_child(damage_label)
 
 
 func _create_enemy_texture() -> Texture2D:
 	# Create a simple colored circle texture for enemy
 	var image = Image.create(64, 64, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0.9, 0.2, 0.2))  # Red color
+	image.fill(Color(0.9, 0.2, 0.2)) # Red color
 	# Add a darker border
 	for x in range(64):
 		for y in range(64):

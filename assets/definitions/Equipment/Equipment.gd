@@ -5,7 +5,7 @@ class_name Equipment
 extends Resource
 
 ## Equipment slot type
-enum Slot { WEAPON, ARMOR, ACCESSORY }
+enum Slot {WEAPON, ARMOR, ACCESSORY}
 
 ## Equipment ID
 @export var equipment_id: String = "wooden_sword"
@@ -41,7 +41,7 @@ enum Slot { WEAPON, ARMOR, ACCESSORY }
 @export var health_bonus: float = 0.0
 
 ## Special effects (list of effect IDs)
-@export var special_effects: Array[String] = []
+@export var special_effects: Array = []
 
 ## Visual color tint for this equipment
 @export var tint_color: Color = Color.WHITE
@@ -105,13 +105,13 @@ func get_random_special_effect(rng: RandomNumberGenerator) -> String:
 ## Material tier colors
 static func get_tier_color(tier: int) -> Color:
 	var colors = [
-		Color(0.55, 0.35, 0.2),   # Wood - brown
-		Color(0.72, 0.45, 0.2),   # Copper - copper/orange
-		Color(0.75, 0.75, 0.78),  # Iron - gray
-		Color(0.55, 0.55, 0.6),   # Steel - blue-gray
-		Color(0.3, 0.6, 0.8),     # Mithril - light blue
-		Color(0.6, 0.5, 0.8),     # Adamantite - purple
-		Color(0.9, 0.3, 0.1),     # Dragon - red-orange
+		Color(0.55, 0.35, 0.2), # Wood - brown
+		Color(0.72, 0.45, 0.2), # Copper - copper/orange
+		Color(0.75, 0.75, 0.78), # Iron - gray
+		Color(0.55, 0.55, 0.6), # Steel - blue-gray
+		Color(0.3, 0.6, 0.8), # Mithril - light blue
+		Color(0.6, 0.5, 0.8), # Adamantite - purple
+		Color(0.9, 0.3, 0.1), # Dragon - red-orange
 	]
 	if tier < colors.size():
 		return colors[tier]

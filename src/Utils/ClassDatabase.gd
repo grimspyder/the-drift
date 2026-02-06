@@ -11,7 +11,7 @@ var _classes: Dictionary = {}
 var _rng: RandomNumberGenerator
 
 
-func _ready() -> void:
+func _init() -> void:
 	_rng = RandomNumberGenerator.new()
 	_register_all_classes()
 
@@ -34,7 +34,7 @@ func register_class(class_def: DrifterClass) -> void:
 	_classes[class_def.class_id] = class_def
 
 
-func get_class(class_id: String) -> DrifterClass:
+func get_drifter_class(class_id: String) -> DrifterClass:
 	if _classes.has(class_id):
 		return _classes[class_id].duplicate()
 	return null
@@ -47,7 +47,7 @@ func get_all_classes() -> Array:
 func get_random_class() -> DrifterClass:
 	var class_ids = _classes.keys()
 	var random_id = class_ids.pick_random()
-	return get_class(random_id)
+	return get_drifter_class(random_id)
 
 
 func get_random_class_exclude(exclude_ids: Array[String]) -> DrifterClass:
@@ -60,7 +60,7 @@ func get_random_class_exclude(exclude_ids: Array[String]) -> DrifterClass:
 		return get_random_class()
 	
 	var random_id = available.pick_random()
-	return get_class(random_id)
+	return get_drifter_class(random_id)
 
 
 func get_class_count() -> int:
@@ -96,7 +96,7 @@ func get_support_classes() -> Array:
 
 
 func get_random_variant(class_id: String) -> DrifterClass:
-	var base_class = get_class(class_id)
+	var base_class = get_drifter_class(class_id)
 	if base_class:
 		return base_class.duplicate_randomized(_rng)
 	return get_random_class()

@@ -61,9 +61,9 @@ var game_won: bool = false
 var _time_warning_shown: bool = false
 var _drift_warning_shown: bool = false
 
-const TIME_WARNING_THRESHOLD: float = 300.0  # 5 minutes remaining
-const TIME_CRITICAL_THRESHOLD: float = 60.0    # 1 minute remaining
-const DRIFT_WARNING_THRESHOLD: int = 8         # 2 drifts remaining
+const TIME_WARNING_THRESHOLD: float = 300.0 # 5 minutes remaining
+const TIME_CRITICAL_THRESHOLD: float = 60.0 # 1 minute remaining
+const DRIFT_WARNING_THRESHOLD: int = 8 # 2 drifts remaining
 
 
 func _ready() -> void:
@@ -177,7 +177,7 @@ func _calculate_world_seed() -> int:
 	
 	# Ensure positive seed
 	if hash_value < 0:
-		hash_value = -hash_value
+		hash_value = - hash_value
 	
 	# Mix in some randomness
 	hash_value = hash_value ^ randi()
@@ -383,13 +383,6 @@ func _show_game_over_screen(reason: String) -> void:
 func get_drift_remaining() -> int:
 	"""Get remaining drifts allowed"""
 	return max(0, max_drifts - drift_count)
-
-
-func get_session_formatted() -> String:
-	"""Get formatted session time string"""
-	var minutes = int(session_time) / 60
-	var seconds = int(session_time) % 60
-	return "%02d:%02d" % [minutes, seconds]
 
 
 func get_session_time_remaining() -> String:

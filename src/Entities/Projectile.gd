@@ -9,6 +9,9 @@ extends Area2D
 ## Damage amount
 @export var damage: float = 25.0
 
+## Whether this is a critical hit
+var is_crit: bool = false
+
 ## Direction the projectile is moving
 var direction: Vector2 = Vector2.RIGHT
 
@@ -24,14 +27,14 @@ func _ready() -> void:
 	sprite = Sprite2D.new()
 	var placeholder_texture = _create_placeholder_texture()
 	sprite.texture = placeholder_texture
-	sprite.scale = Vector2(0.3, 0.1)  # Small bullet shape
+	sprite.scale = Vector2(0.3, 0.1) # Small bullet shape
 	sprite.position = Vector2.ZERO
 	add_child(sprite)
 
 	# Create collision shape
 	collision_shape = CollisionShape2D.new()
 	var shape = RectangleShape2D.new()
-	shape.size = Vector2(20, 6)  # Match sprite scale
+	shape.size = Vector2(20, 6) # Match sprite scale
 	collision_shape.shape = shape
 	collision_shape.position = Vector2.ZERO
 	add_child(collision_shape)
@@ -39,8 +42,8 @@ func _ready() -> void:
 	# Set collision layer/mask
 	# Layer 3: Projectiles
 	# Mask 2: Walls, Mask 4: Enemies
-	collision_layer = 3   # Projectiles layer
-	collision_mask = 2 | 4    # Can hit Walls AND Enemies
+	collision_layer = 3 # Projectiles layer
+	collision_mask = 2 | 4 # Can hit Walls AND Enemies
 	
 	# Connect collision signals
 	body_entered.connect(_on_body_entered)
@@ -54,7 +57,7 @@ func _ready() -> void:
 func _create_placeholder_texture() -> Texture2D:
 	# Create a simple colored rectangle texture
 	var image = Image.create(64, 64, false, Image.FORMAT_RGBA8)
-	image.fill(Color(1.0, 0.8, 0.2))  # Golden yellow color
+	image.fill(Color(1.0, 0.8, 0.2)) # Golden yellow color
 	return ImageTexture.create_from_image(image)
 
 
@@ -78,7 +81,7 @@ func _on_body_entered(body: Node) -> void:
 		return
 	
 	# Hit walls or other solid objects
-	if body.collision_layer == 2:  # Walls layer
+	if body is TileMap or body.get("collision_layer") == 2:
 		queue_free()
 		return
 	

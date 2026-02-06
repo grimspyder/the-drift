@@ -224,7 +224,7 @@ func get_tier_name(tier: int) -> String:
 func get_equipment_for_class(class_id: String, tier: int = 0) -> Dictionary:
 	# Get equipment based on class
 	var class_db = load("res://src/Utils/ClassDatabase.gd").new()
-	var class_def = class_db.get_class(class_id)
+	var class_def = class_db.get_drifter_class(class_id)
 	
 	var weapon = create_weapon(class_def.starting_weapon, tier)
 	var armor = create_armor(class_def.starting_armor, tier)

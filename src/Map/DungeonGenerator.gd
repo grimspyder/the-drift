@@ -32,13 +32,13 @@ const TILE_SIZE: int = 32
 
 var _tile_map: TileMap
 var _rng: RandomNumberGenerator
-var _rooms: Array[Dictionary] = []
+var _rooms: Array = []
 
 ## Exit stairs instance
 var _exit_stairs: Node2D
 
 ## Tile size (32x32 pixels)
-const TILE_SIZE: int = 32
+
 
 # -------------------------------------------------------------------------
 # Room Class
@@ -344,7 +344,7 @@ func _generate_rooms() -> void:
 			# Place the room
 			_place_room(new_room)
 			_rooms.append(new_room)
-			print("Room ", _rooms.size(), ": pos(", room_x, ",", room_y, 
+			print("Room ", _rooms.size(), ": pos(", room_x, ",", room_y,
 				  ") size(", room_width, "x", room_height, ")")
 	
 	print("Room generation complete: ", _rooms.size(), " rooms after ", attempts, " attempts")
@@ -455,7 +455,7 @@ func _set_floor_tile(x: int, y: int) -> void:
 func _ready() -> void:
 	# Get TileMap reference - look in parent (Level) if not in self
 	if tile_map_path:
-		var path_str = tile_map_path
+		var path_str = str(tile_map_path)
 		if path_str.begins_with("../"):
 			# Relative path from parent
 			var parent = get_parent()

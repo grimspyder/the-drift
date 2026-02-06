@@ -17,6 +17,8 @@ func _ready() -> void:
 	# Get GameManager autoload
 	game_manager = get_node("/root/GameManager")
 	
+	add_to_group("game")
+	
 	# Initialize subsystems
 	setup_map()
 	setup_entities()
@@ -76,41 +78,37 @@ func _generate_level() -> void:
 # -------------------------------------------------------------------------
 
 func setup_map() -> void:
-	map_node = Node2D.new()
-	map_node.name = "Map"
-	add_child(map_node)
-	
-	# Instantiate the Level scene
-	var level_scene = load("res://src/Map/Level.tscn")
-	if level_scene:
-		level_node = level_scene.instantiate()
-		map_node.add_child(level_node)
-		print("Level loaded successfully")
+	map_node = get_node("Map")
+	if map_node.has_node("Level"):
+		level_node = map_node.get_node("Level")
+		print("Level found in scene")
 	else:
-		push_error("Failed to load Level scene!")
+		push_error("Level node not found in Map!")
 
 
 func setup_entities() -> void:
-	entities_node = Node2D.new()
-	entities_node.name = "Entities"
-	add_child(entities_node)
-	# Entities (Player, Enemies) will be spawned here
+	entities_node = get_node("Entities")
+	# Player is already in the scene file under Entities
 
 
 func setup_ui() -> void:
-	ui_node = CanvasLayer.new()
-	ui_node.name = "UI"
-	ui_node.layer = 100  # Render on top of everything
-	add_child(ui_node)
-	
-	# Instantiate and add HUD
-	var hud_scene = load("res://src/UI/HUD.tscn")
-	if hud_scene:
-		var hud = hud_scene.instantiate()
-		ui_node.add_child(hud)
-		print("HUD loaded successfully")
+	if has_node("UI"):
+		ui_node = get_node("UI")
 	else:
-		push_error("Failed to load HUD scene!")
+		ui_node = CanvasLayer.new()
+		ui_node.name = "UI"
+		add_child(ui_node)
+	
+	# Instantiate and add HUD if not present
+	if not ui_node.has_node("HUD"):
+		var hud_scene = load("res://src/UI/HUD.tscn")
+		if hud_scene:
+			var hud = hud_scene.instantiate()
+			hud.name = "HUD"
+			ui_node.add_child(hud)
+			print("HUD loaded successfully")
+		else:
+			push_error("Failed to load HUD scene!")
 
 
 # -------------------------------------------------------------------------
@@ -131,7 +129,7 @@ func get_player_spawn_position() -> Vector2:
 	"""Get player spawn position from level"""
 	if level_node and level_node.has_method("get_player_spawn_position"):
 		return level_node.get_player_spawn_position()
-	return Vector2(320, 240)  # Default fallback
+	return Vector2(320, 240) # Default fallback
 
 
 func get_world_info() -> Dictionary:

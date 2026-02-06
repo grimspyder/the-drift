@@ -41,13 +41,13 @@ extends Resource
 @export var enemy_damage_mod: float = 1.0
 
 ## Special enemy types that spawn in this world
-@export var special_enemies: Array[String] = []
+@export var special_enemies: Array = []
 
 ## Resource spawn rate modifier
 @export var resource_spawn_mod: float = 1.0
 
 ## Hazard types present in this world
-@export var hazards: Array[String] = []
+@export var hazards: Array = []
 
 ## Music/ambience type
 @export var audio_theme: String = "default"

@@ -1,7 +1,8 @@
-extends Node
-
 ## Health Component - Reusable health system for Player and Enemies
 ## Attach to any entity that needs health/damage handling
+
+class_name Health
+extends Node
 
 signal died
 signal health_changed(new_health: float, max_health: float)
@@ -9,9 +10,9 @@ signal damaged(amount: float, current_health: float)
 
 @export var max_health: float = 100.0
 @export var current_health: float = 100.0
-@export var invincibility_time: float = 0.0  # Time after taking damage before can take damage again
+@export var invincibility_time: float = 0.0 # Time after taking damage before can take damage again
 
-var _last_damage_time: float = -100.0  # Allow immediate first damage
+var _last_damage_time: float = -100.0 # Allow immediate first damage
 var _is_dead: bool = false
 
 
@@ -29,7 +30,7 @@ func take_damage(amount: float) -> void:
 		if current_time - _last_damage_time < invincibility_time:
 			return
 	
-	_current_health -= amount
+	current_health -= amount
 	_last_damage_time = Time.get_ticks_msec() / 1000.0
 	
 	# Emit signals

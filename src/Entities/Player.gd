@@ -82,7 +82,7 @@ func _ready() -> void:
 		sprite = Sprite2D.new()
 		var placeholder_texture = _create_placeholder_texture()
 		sprite.texture = placeholder_texture
-		sprite.scale = Vector2(0.5, 0.5)  # 32x32 equivalent
+		sprite.scale = Vector2(0.5, 0.5) # 32x32 equivalent
 		sprite.position = Vector2.ZERO
 		add_child(sprite)
 
@@ -90,15 +90,15 @@ func _ready() -> void:
 	if collision_shape == null:
 		collision_shape = CollisionShape2D.new()
 		var shape = RectangleShape2D.new()
-		shape.size = Vector2(32, 32)  # Match sprite size
+		shape.size = Vector2(32, 32) # Match sprite size
 		collision_shape.shape = shape
 		collision_shape.position = Vector2.ZERO
 		add_child(collision_shape)
 	
 	# Set up physics layers
 	# Layer 1: Player, Layer 2: Walls
-	collision_layer = 1  # Player is on layer 1
-	collision_mask = 2   # Player collides with walls on layer 2
+	collision_layer = 1 # Player is on layer 1
+	collision_mask = 2 # Player collides with walls on layer 2
 
 	# Create and setup camera
 	camera = Camera2D.new()
@@ -120,7 +120,7 @@ func _initialize_class_and_equipment() -> void:
 	add_child(class_db)
 	
 	# Start with Warrior class
-	current_class = class_db.get_class("warrior")
+	current_class = class_db.get_drifter_class("warrior")
 	if current_class:
 		_apply_class_stats()
 	
@@ -137,7 +137,7 @@ func _initialize_class_and_equipment() -> void:
 func _create_placeholder_texture() -> Texture2D:
 	# Create a simple colored square texture
 	var image = Image.create(64, 64, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0.2, 0.6, 0.9))  # Blue color
+	image.fill(Color(0.2, 0.6, 0.9)) # Blue color
 	# Add a simple border
 	for x in range(64):
 		for y in range(64):
@@ -309,7 +309,7 @@ func mutate_on_drift(new_class_id: String, new_weapon_tier: int, new_armor_tier:
 	
 	# Get new class
 	var old_class_name = current_class.display_name if current_class else "Unknown"
-	current_class = class_db.get_class(new_class_id)
+	current_class = class_db.get_drifter_class(new_class_id)
 	
 	if not current_class:
 		current_class = class_db.get_random_class()
@@ -343,7 +343,7 @@ func mutate_random(exclude_class: String = "") -> void:
 		# Calculate new equipment tier (increases with drift count)
 		var gm = load("res://src/Entities/GameManager.gd").new()
 		var tier = gm.drift_count if gm else 0
-		tier = mini(tier, 5)  # Cap at tier 5
+		tier = mini(tier, 5) # Cap at tier 5
 		
 		mutate_on_drift(new_class.class_id, tier, tier)
 

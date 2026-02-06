@@ -32,8 +32,8 @@ func _ready() -> void:
 	# Create visual representation
 	_create_visuals()
 	
-	# Connect area entered signal
-	area_entered.connect(_on_area_entered)
+	# Connect body entered signal (for Player)
+	body_entered.connect(_on_body_entered)
 	
 	print("ExitStairs: Created and ready")
 
@@ -42,7 +42,7 @@ func _setup_collision() -> void:
 	# Create circular collision shape for detection
 	collision_shape = CollisionShape2D.new()
 	var shape = CircleShape2D.new()
-	shape.radius = 24  # Slightly smaller than tile size
+	shape.radius = 24 # Slightly smaller than tile size
 	collision_shape.shape = shape
 	add_child(collision_shape)
 
@@ -58,7 +58,11 @@ func _create_visuals() -> void:
 	# Create animation player for pulsing effect
 	animation_player = AnimationPlayer.new()
 	var pulse_anim = _create_pulse_animation()
-	animation_player.add_animation("pulse", pulse_anim)
+	
+	var anim_library = AnimationLibrary.new()
+	anim_library.add_animation("pulse", pulse_anim)
+	
+	animation_player.add_animation_library("", anim_library)
 	animation_player.play("pulse")
 	add_child(animation_player)
 	
@@ -69,7 +73,7 @@ func _create_visuals() -> void:
 func _create_stairs_texture() -> Texture2D:
 	"""Create a procedural texture for stairs/portal"""
 	var image = Image.create(48, 48, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0, 0, 0, 0))  # Transparent background
+	image.fill(Color(0, 0, 0, 0)) # Transparent background
 	
 	# Draw spiral/stairs pattern
 	var center_x = 24
@@ -104,7 +108,7 @@ func _create_pulse_animation() -> Animation:
 	animation.loop_mode = Animation.LOOP_LINEAR
 	
 	# Track for sprite scale
-	var track_index = animation.add_track(Animation.TYPE_PROPERTY)
+	var track_index = animation.add_track(Animation.TYPE_VALUE)
 	animation.track_set_path(track_index, ".:scale")
 	
 	# Keyframes: small -> large -> small
@@ -113,7 +117,7 @@ func _create_pulse_animation() -> Animation:
 	animation.track_insert_key(track_index, 1.5, Vector2(0.7, 0.7))
 	
 	# Track for modulate color
-	var color_track = animation.add_track(Animation.TYPE_PROPERTY)
+	var color_track = animation.add_track(Animation.TYPE_VALUE)
 	animation.track_set_path(color_track, ".:modulate")
 	
 	animation.track_insert_key(color_track, 0.0, Color(0.5, 0.7, 1.0))
@@ -129,11 +133,11 @@ func _create_particles() -> void:
 	particles.amount = 20
 	particles.lifetime = 1.0
 	particles.position = Vector2.ZERO
-	particles.emission_shape = GPUParticles2D.EMISSION_SHAPE_SPHERE
-	particles.emission_sphere_radius = 16
 	
 	# Particle material
-	var material = ParticleMaterial.new()
+	var material = ParticleProcessMaterial.new()
+	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	material.emission_sphere_radius = 16
 	material.direction = Vector3(0, -1, 0)
 	material.spread = 45
 	material.initial_velocity_min = 20
@@ -146,14 +150,7 @@ func _create_particles() -> void:
 	
 	# Particle texture (simple dot)
 	var particle_tex = _create_particle_texture()
-	var pass_tex = StandardMaterial2D.new()
-	pass_tex.albedo_texture = particle_tex
-	pass_tex.blend_mode = StandardMaterial2D.BLEND_ADD
-	pass_tex.emission_enabled = true
-	pass_tex.emission = Color(0.5, 0.8, 1.0)
-	pass_tex.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	pass_tex.albedo_color = Color(0.5, 0.8, 1.0, 0.6)
-	particles.draw_pass_1 = pass_tex
+	particles.texture = particle_tex
 	
 	add_child(particles)
 
@@ -174,13 +171,13 @@ func _create_particle_texture() -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
-func _on_area_entered(area: Area2D) -> void:
-	"""Handle area entry - check if it's the player"""
+func _on_body_entered(body: Node2D) -> void:
+	"""Handle body entry - check if it's the player"""
 	if not active:
 		return
 	
-	# Check if the entering area is the player
-	if area.is_in_group("player") or area.has_method("is_player"):
+	# Check if the entering body is the player
+	if body.is_in_group("player") or body.has_method("get_player_stats"):
 		_trigger_stairs()
 
 

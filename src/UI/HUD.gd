@@ -66,7 +66,7 @@ func _ready() -> void:
 	
 	# Set up warning timer
 	_warning_timer = Timer.new()
-	_warning_timer.wait_time = 3.0  # Warning shown for 3 seconds
+	_warning_timer.wait_time = 3.0 # Warning shown for 3 seconds
 	_warning_timer.one_shot = true
 	_warning_timer.timeout.connect(_on_warning_timer_timeout)
 	add_child(_warning_timer)
@@ -121,7 +121,7 @@ func _update_all_ui() -> void:
 	_find_player()
 	_update_health()
 	_update_drift_counter()
-	_update_timer()
+	_update_session_timer()
 	_update_class_equipment()
 	_update_theme_indicator()
 
@@ -142,17 +142,17 @@ func _update_health() -> void:
 	health_label.text = "HP: %d / %d" % [int(current_health), int(max_health)]
 	
 	# Update health bar fill width
-	var bar_width = health_bar_background.size.x - 4  # Account for borders
+	var bar_width = health_bar_background.size.x - 4 # Account for borders
 	health_bar_fill.size.x = bar_width * health_percent
 	
 	# Update health bar color based on percentage
 	var bar_color: Color
 	if health_percent > 0.6:
-		bar_color = Color(0.2, 0.8, 0.3)  # Green
+		bar_color = Color(0.2, 0.8, 0.3) # Green
 	elif health_percent > 0.3:
-		bar_color = Color(0.9, 0.8, 0.2)  # Yellow
+		bar_color = Color(0.9, 0.8, 0.2) # Yellow
 	else:
-		bar_color = Color(0.9, 0.2, 0.2)  # Red
+		bar_color = Color(0.9, 0.2, 0.2) # Red
 	
 	health_bar_fill.color = bar_color
 
@@ -163,7 +163,7 @@ func _update_drift_counter() -> void:
 	
 	var world_info = game_manager.get_world_info() if game_manager.has_method("get_world_info") else {}
 	
-	var drift_number = world_info.get("drift_count", 0) + 1  # Display as 1-indexed
+	var drift_number = world_info.get("drift_count", 0) + 1 # Display as 1-indexed
 	var drifts_remaining = world_info.get("drifts_remaining", 10)
 	
 	drift_number_label.text = "Drift #%d" % drift_number
@@ -171,17 +171,17 @@ func _update_drift_counter() -> void:
 	
 	# Change color based on remaining drifts
 	if drifts_remaining <= 1:
-		drift_remaining_label.modulate = Color(1.0, 0.2, 0.2)  # Critical red
+		drift_remaining_label.modulate = Color(1.0, 0.2, 0.2) # Critical red
 		drift_remaining_label.add_theme_font_size_override("font_size", 18)
 	elif drifts_remaining <= 2:
-		drift_remaining_label.modulate = Color(1.0, 0.6, 0.2)  # Orange warning
+		drift_remaining_label.modulate = Color(1.0, 0.6, 0.2) # Orange warning
 		drift_remaining_label.add_theme_font_size_override("font_size", 16)
 	else:
-		drift_remaining_label.modulate = Color(0.9, 0.9, 0.9)  # Normal white
+		drift_remaining_label.modulate = Color(0.9, 0.9, 0.9) # Normal white
 		drift_remaining_label.add_theme_font_size_override("font_size", 14)
 
 
-func _update_timer() -> void:
+func _update_session_timer() -> void:
 	if not game_manager:
 		return
 	
@@ -195,14 +195,14 @@ func _update_timer() -> void:
 	
 	# Show warnings based on time remaining
 	var remaining_seconds = _parse_time_string(remaining)
-	if remaining_seconds < 60:  # Under 1 minute - critical
-		remaining_time_label.modulate = Color(1.0, 0.2, 0.2)  # Critical red
+	if remaining_seconds < 60: # Under 1 minute - critical
+		remaining_time_label.modulate = Color(1.0, 0.2, 0.2) # Critical red
 		remaining_time_label.add_theme_font_size_override("font_size", 18)
-	elif remaining_seconds < 300:  # Under 5 minutes - warning
-		remaining_time_label.modulate = Color(1.0, 0.6, 0.2)  # Orange warning
+	elif remaining_seconds < 300: # Under 5 minutes - warning
+		remaining_time_label.modulate = Color(1.0, 0.6, 0.2) # Orange warning
 		remaining_time_label.add_theme_font_size_override("font_size", 16)
-	else:  # Normal
-		remaining_time_label.modulate = Color(0.9, 0.9, 0.9)  # Normal white
+	else: # Normal
+		remaining_time_label.modulate = Color(0.9, 0.9, 0.9) # Normal white
 		remaining_time_label.add_theme_font_size_override("font_size", 14)
 
 
@@ -213,7 +213,7 @@ func _parse_time_string(time_str: String) -> int:
 		var minutes = parts[0].to_int()
 		var seconds = parts[1].to_int()
 		return minutes * 60 + seconds
-	return 3600  # Default to 1 hour
+	return 3600 # Default to 1 hour
 
 
 func _update_class_equipment() -> void:
@@ -231,7 +231,7 @@ func _update_class_equipment() -> void:
 	equipment_label.text = "%s (+%.0f DMG)" % [weapon, weapon_damage]
 	
 	# Update material indicator color based on tier
-	var equipment = player.weapon if player.has("weapon") else null
+	var equipment = player.get("weapon")
 	if equipment and equipment.has_method("get_tier_name"):
 		var tier = equipment.material_tier
 		material_indicator.color = Equipment.get_tier_color(tier)
@@ -279,7 +279,7 @@ func update_drift_ui() -> void:
 
 
 func update_timer_ui() -> void:
-	_update_timer()
+	_update_session_timer()
 
 
 func update_class_equipment_ui() -> void:
@@ -320,7 +320,7 @@ func show_time_warning() -> void:
 		return
 	
 	warning_label.text = "⚠️ WARNING: 5 MINUTES REMAINING! ⚠️"
-	warning_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))  # Yellow-orange
+	warning_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2)) # Yellow-orange
 	warning_container.visible = true
 	
 	# Pulse animation
@@ -339,7 +339,7 @@ func show_drift_warning() -> void:
 		return
 	
 	warning_label.text = "⚠️ WARNING: 2 DRIFTS REMAINING! ⚠️"
-	warning_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))  # Red
+	warning_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4)) # Red
 	warning_container.visible = true
 	
 	# Pulse animation
