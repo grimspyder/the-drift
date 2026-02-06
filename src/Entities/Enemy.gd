@@ -41,6 +41,9 @@ var _is_chasing: bool = false
 
 
 func _ready() -> void:
+	# Add to enemies group for system queries
+	add_to_group("enemies")
+	
 	# Create health component if not present
 	if not has_node("Health"):
 		health = Health.new()

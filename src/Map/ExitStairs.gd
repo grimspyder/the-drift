@@ -23,6 +23,9 @@ var particles: GPUParticles2D
 
 
 func _ready() -> void:
+	# Add to exit_stairs group for system queries
+	add_to_group("exit_stairs")
+	
 	# Set up collision
 	_setup_collision()
 	
