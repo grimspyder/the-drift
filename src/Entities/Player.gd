@@ -39,10 +39,33 @@ var health: Health
 ## Player death signal (for GameManager to handle drift)
 signal player_died
 
+## -------------------------------------------------------------------------
+## CLASS AND EQUIPMENT SYSTEM
+## -------------------------------------------------------------------------
+
+## Current player class
+var current_class: DrifterClass
+
+## Current weapon
+var weapon: Equipment
+
+## Current armor
+var armor: Equipment
+
+## Equipment database reference
+var equipment_db: EquipmentDatabase
+
+## Whether player has mutated (for drift effect)
+var has_mutated: bool = false
+
 
 func _ready() -> void:
 	# Add to player group for easy detection
 	add_to_group("player")
+	
+	# Initialize equipment database
+	equipment_db = EquipmentDatabase.new()
+	add_child(equipment_db)
 	
 	# Create health component
 	health = Health.new()
@@ -86,6 +109,29 @@ func _ready() -> void:
 	# Load projectile scene if not assigned
 	if projectile_scene == null:
 		projectile_scene = load("res://src/Entities/Projectile.tscn")
+	
+	# Initialize starting class and equipment
+	_initialize_class_and_equipment()
+
+
+func _initialize_class_and_equipment() -> void:
+	"""Initialize player with starting class and equipment"""
+	var class_db = ClassDatabase.new()
+	add_child(class_db)
+	
+	# Start with Warrior class
+	current_class = class_db.get_class("warrior")
+	if current_class:
+		_apply_class_stats()
+	
+	# Get starting equipment
+	var equip_data = equipment_db.get_equipment_for_class(current_class.class_id, 0)
+	weapon = equip_data["weapon"]
+	armor = equip_data["armor"]
+	
+	print("Player initialized as: ", current_class.display_name)
+	print("Weapon: ", weapon.get_full_name())
+	print("Armor: ", armor.get_full_name())
 
 
 func _create_placeholder_texture() -> Texture2D:
@@ -125,9 +171,16 @@ func _handle_movement(delta: float) -> void:
 	# Normalize input
 	input_direction = input_direction.normalized()
 
+	# Apply speed modifier from class and armor
+	var effective_speed = speed
+	if current_class:
+		effective_speed = current_class.get_effective_speed(effective_speed)
+	if armor:
+		effective_speed *= armor.speed_modifier
+	
 	if input_direction.length() > 0:
 		# Accelerate toward target velocity
-		var target_velocity = input_direction * speed
+		var target_velocity = input_direction * effective_speed
 		velocity = velocity.move_toward(target_velocity, acceleration * delta)
 	else:
 		# Apply friction when no input
@@ -149,10 +202,17 @@ func _handle_shooting(delta: float) -> void:
 	if shoot_cooldown > 0:
 		shoot_cooldown -= delta
 
+	# Get effective attack speed
+	var effective_fire_rate = fire_rate
+	if current_class:
+		effective_fire_rate *= current_class.attack_speed_modifier
+	if weapon:
+		effective_fire_rate *= weapon.attack_speed
+	
 	# Check for shoot input
 	if Input.is_action_pressed("shoot") and shoot_cooldown <= 0:
 		shoot()
-		shoot_cooldown = 1.0 / fire_rate
+		shoot_cooldown = 1.0 / effective_fire_rate
 
 
 func shoot() -> void:
@@ -168,14 +228,25 @@ func shoot() -> void:
 
 	# Set projectile direction
 	projectile.set_direction(facing_direction)
-
-	# Optional: Add visual feedback or sound here
+	
+	# Apply damage from weapon
+	if weapon:
+		projectile.damage = weapon.get_damage()
+	
+	# Apply crit from class
+	if current_class and randf() < current_class.crit_chance:
+		projectile.is_crit = true
+		projectile.damage *= current_class.crit_multiplier
 
 
 func take_damage(amount: float) -> void:
-	# Public method for enemies to call
+	# Apply armor defense
+	var effective_damage = amount
+	if armor:
+		effective_damage = max(1.0, effective_damage - armor.get_defense())
+	
 	if health:
-		health.take_damage(amount)
+		health.take_damage(effective_damage)
 
 
 func heal(amount: float) -> void:
@@ -196,7 +267,6 @@ func _on_died() -> void:
 	collision_layer = 0
 	collision_mask = 0
 	
-	# Respawn handled by GameManager via player_died signal
 	print("Player died! Waiting for drift...")
 
 
@@ -226,3 +296,116 @@ func reset_player() -> void:
 	# Reset sprite color
 	if sprite:
 		sprite.modulate = Color.WHITE
+
+
+## -------------------------------------------------------------------------
+## CLASS MUTATION SYSTEM (for drift)
+## -------------------------------------------------------------------------
+
+func mutate_on_drift(new_class_id: String, new_weapon_tier: int, new_armor_tier: int) -> void:
+	"""Mutate player to a new class and equipment tier after drifting"""
+	
+	var class_db = ClassDatabase.new()
+	
+	# Get new class
+	var old_class_name = current_class.display_name if current_class else "Unknown"
+	current_class = class_db.get_class(new_class_id)
+	
+	if not current_class:
+		current_class = class_db.get_random_class()
+	
+	# Apply class stats
+	_apply_class_stats()
+	
+	# Upgrade equipment
+	if weapon:
+		weapon = equipment_db.create_weapon(weapon.equipment_id.get_slice("_", 0), new_weapon_tier)
+	if armor:
+		armor = equipment_db.create_armor(armor.equipment_id.get_slice("_", 0), new_armor_tier)
+	
+	# Visual mutation
+	_apply_visual_mutation()
+	
+	has_mutated = true
+	
+	print("Player mutated!")
+	print("Old class: ", old_class_name, " -> New class: ", current_class.display_name)
+	print("New weapon: ", weapon.get_full_name())
+	print("New armor: ", armor.get_full_name())
+
+
+func mutate_random(exclude_class: String = "") -> void:
+	"""Mutate player to a random new class"""
+	var class_db = ClassDatabase.new()
+	var new_class = class_db.get_random_class_exclude([exclude_class])
+	
+	if new_class:
+		# Calculate new equipment tier (increases with drift count)
+		var gm = load("res://src/Entities/GameManager.gd").new()
+		var tier = gm.drift_count if gm else 0
+		tier = mini(tier, 5)  # Cap at tier 5
+		
+		mutate_on_drift(new_class.class_id, tier, tier)
+
+
+func _apply_class_stats() -> void:
+	"""Apply current class modifiers to player stats"""
+	if not current_class or not health:
+		return
+	
+	# Apply health modifier
+	var new_max_health = max_health * current_class.hp_modifier
+	health.max_health = new_max_health
+	health.current_health = new_max_health
+	
+	# Apply armor health bonus
+	if armor:
+		health.max_health += armor.health_bonus
+		health.current_health += armor.health_bonus
+
+
+func _apply_visual_mutation() -> void:
+	"""Apply visual changes based on new class"""
+	if not sprite or not current_class:
+		return
+	
+	# Tint sprite with class color
+	sprite.modulate = current_class.class_color
+	
+	# Reset after a moment for transition effect
+	await get_tree().create_timer(0.5).timeout
+	if sprite:
+		sprite.modulate = Color.WHITE
+
+
+func get_player_stats() -> Dictionary:
+	"""Return player stats for UI display"""
+	var stats = {
+		"class": current_class.display_name if current_class else "Unknown",
+		"health": health.current_health if health else 0,
+		"max_health": health.max_health if health else 0,
+		"weapon": weapon.get_full_name() if weapon else "Unarmed",
+		"weapon_damage": weapon.get_damage() if weapon else 0,
+		"armor": armor.get_full_name() if armor else "No Armor",
+		"armor_defense": armor.get_defense() if armor else 0,
+		"speed": speed * (current_class.speed_modifier if current_class else 1.0),
+		"crit_chance": current_class.crit_chance * 100 if current_class else 0,
+		"crit_damage": current_class.crit_multiplier * 100 if current_class else 0,
+	}
+	return stats
+
+
+func get_effective_damage() -> float:
+	"""Calculate effective damage including class and weapon modifiers"""
+	var base_damage = weapon.get_damage() if weapon else 10.0
+	if current_class:
+		base_damage = current_class.get_effective_damage(base_damage)
+	return base_damage
+
+
+func get_effective_defense() -> float:
+	"""Calculate effective defense including class and armor modifiers"""
+	var base_defense = armor.get_defense() if armor else 0.0
+	if current_class:
+		base_defense *= current_class.defense_modifier
+	return base_defense

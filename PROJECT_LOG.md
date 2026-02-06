@@ -27,13 +27,14 @@ Create MVP beta of The Drift - a roguelike game with "Many Worlds" death mechani
 
 ### Status
 **Phase:** Development  
-**Current Task:** 3.1 Combat System (Coding Agent active)  
+**Current Task:** 3.2 The Drift Mechanic ⭐ CORE FEATURE (Coding Agent active)  
 **Completed:**
 - ✅ 1.1 Project Setup (23:50 UTC)
 - ✅ 1.2 Player Controller (23:52 UTC)
 - ✅ 2.1 Static Level Layout (23:56 UTC)
 - ✅ 2.2 Procedural Generation (23:58 UTC)
-**Next Milestone:** Task 3.2 The Drift Mechanic
+- ✅ 3.1 Combat System (00:03 UTC)
+**Next Milestone:** Task 3.2 completion (death → drift → respawn)
 
 ### Key Decisions Pending
 - [ ] Exact MVP feature scope

@@ -62,7 +62,8 @@
 - Basic health system
 **Agent:** Coding Agent
 **Dependencies:** 1.2, 2.1
-**Status:** ⏳ Blocked by Phase 2
+**Status:** ✅ COMPLETE - Finished 2026-02-06
+**Commit:** `778f74a` - feat: Implement combat system
 
 **Task 3.2: The Drift Mechanic** ⭐ CRITICAL
 - Death detection
@@ -203,7 +204,7 @@
 2. ✅ Task 1.2 Complete - Player controller implemented
 3. ✅ Task 2.1 Complete - Static level layout added
 4. ✅ Task 2.2 Complete - Procedural dungeon generation implemented
-5. ⏳ Spawn Coding Agent for Task 3.1 (Combat System)
+5. ⏳ Spawn Coding Agent for Task 3.2 (The Drift Mechanic)
 
 ---
 

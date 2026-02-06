@@ -9,14 +9,14 @@ var level_node: Node2D
 var entities_node: Node2D
 var ui_node: CanvasLayer
 
-## Current world ID (from GameManager)
-var world_id: int = 0
-
-## Session seed for deterministic generation
-var session_seed: int = 0
+## Reference to GameManager (autoload)
+var game_manager: Node
 
 
 func _ready() -> void:
+	# Get GameManager autoload
+	game_manager = get_node("/root/GameManager")
+	
 	# Initialize subsystems
 	setup_map()
 	setup_entities()
@@ -28,7 +28,19 @@ func _ready() -> void:
 	# Connect signals
 	connect_signals()
 	
-	print("The Drift initialized. World ID: ", world_id)
+	# Register with GameManager
+	if game_manager:
+		game_manager.register_level(level_node)
+		
+		# Find and register player
+		var player = entities_node.get_node_or_null("Player")
+		if player:
+			game_manager.register_player(player)
+	
+	print("The Drift initialized.")
+	if game_manager:
+		print("World: ", game_manager.world_id)
+		print("Session seed: ", game_manager.session_seed)
 
 
 func _process(_delta: float) -> void:
@@ -40,27 +52,23 @@ func _process(_delta: float) -> void:
 # -------------------------------------------------------------------------
 
 func _generate_initial_level() -> void:
-	"""Generate the initial level with random seed"""
-	session_seed = randi()
-	_generate_level()
+	"""Generate the initial level"""
+	if level_node:
+		level_node.generate_level()
 
 
 func _generate_level() -> void:
-	"""Generate a level using the world ID and session seed"""
+	"""Generate a level"""
 	if level_node:
 		# Calculate deterministic seed
-		var level_seed = _get_deterministic_seed()
-		print("Generating level with seed: ", level_seed)
+		var seed_value = 0
+		if game_manager:
+			seed_value = game_manager.session_seed + game_manager.world_id
+		
+		print("Generating level with seed: ", seed_value)
 		
 		# Call generate on the level
-		if level_node.has_method("generate_level"):
-			level_node.generate_level(level_seed)
-
-
-func _get_deterministic_seed() -> int:
-	"""Calculate deterministic seed from world_id and session_seed"""
-	# Use hash combination for deterministic but varied seeds
-	return hash(world_id + session_seed)
+		level_node.generate_level(seed_value)
 
 
 # -------------------------------------------------------------------------
@@ -95,38 +103,72 @@ func setup_ui() -> void:
 	add_child(ui_node)
 	# HUD, menus, etc. will be added to UI layer
 
+
 # -------------------------------------------------------------------------
 # Signal Connections
 # -------------------------------------------------------------------------
 
 func connect_signals() -> void:
 	# Connect to Player death signal for drift mechanic
-	# player.died.connect(_on_player_died)
+	# The GameManager handles player death via registered signals
 	pass
 
+
 # -------------------------------------------------------------------------
-# Drift Mechanic
+# Drift Mechanic (handled by GameManager, but referenced here)
 # -------------------------------------------------------------------------
 
-func get_world_id() -> int:
-	# Returns current world ID from GameManager autoload
-	return world_id
+func get_player_spawn_position() -> Vector2:
+	"""Get player spawn position from level"""
+	if level_node and level_node.has_method("get_player_spawn_position"):
+		return level_node.get_player_spawn_position()
+	return Vector2(320, 240)  # Default fallback
 
 
-func trigger_drift() -> void:
-	"""Called when player dies - transfers to next world"""
-	print("DRIFT TRIGGERED: Entering world #", world_id + 1)
+func get_world_info() -> Dictionary:
+	"""Get current world information"""
+	if game_manager and game_manager.has_method("get_world_info"):
+		return game_manager.get_world_info()
+	return {}
+
+
+func get_session_seed() -> int:
+	"""Get the current session seed"""
+	if game_manager:
+		return game_manager.session_seed
+	return randi()
+
+
+func force_drift() -> void:
+	"""Force a drift (for testing)"""
+	if game_manager and game_manager.has_method("force_drift"):
+		game_manager.force_drift()
+
+
+func skip_world() -> void:
+	"""Skip to the next world (for testing)"""
+	if game_manager and game_manager.has_method("skip_world"):
+		game_manager.skip_world()
+
+
+# -------------------------------------------------------------------------
+# Debug/Test Functions
+# -------------------------------------------------------------------------
+
+func debug_print_state() -> void:
+	"""Print current game state (for debugging)"""
+	print("=== Game State ===")
+	if game_manager:
+		var info = game_manager.get_world_info()
+		print("World ID: ", info.get("world_id", 0))
+		print("Theme: ", info.get("theme_name", "Unknown"))
+		print("Drift #: ", info.get("drift_count", 0))
+		print("Session time: ", info.get("session_time", ""))
+		print("Is drifting: ", info.get("is_driftging", false))
 	
-	# Increment world ID
-	world_id += 1
-	
-	# Regenerate level with new seed
-	_generate_level()
-	
-	# TODO: Mutate player state (class shift, equipment variation)
-	# TODO: Respawn player in first room
-
-
-func set_session_seed(seed: int) -> void:
-	"""Set the session seed for deterministic generation"""
-	session_seed = seed
+	var player = entities_node.get_node_or_null("Player")
+	if player and player.has_method("get_player_stats"):
+		var stats = player.get_player_stats()
+		print("Player class: ", stats.get("class", "Unknown"))
+		print("Player health: ", stats.get("health", 0), "/", stats.get("max_health", 0))
+	print("==================")

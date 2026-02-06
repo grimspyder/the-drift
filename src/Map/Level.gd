@@ -1,7 +1,7 @@
 extends Node2D
 
 ## Level scene for The Drift
-## Uses DungeonGenerator for procedural level generation
+## Uses DungeonGenerator for procedural level generation with theme support
 
 ## DungeonGenerator reference
 @onready var dungeon_generator: Node2D = $DungeonGenerator
@@ -12,10 +12,40 @@ extends Node2D
 ## Seed for level generation
 var _level_seed: int = 0
 
+## Current world theme
+var _current_theme: WorldTheme
+
+## Theme database reference
+var _theme_db: WorldThemeDatabase
+
+## Visual transition overlay
+var _transition_overlay: ColorRect
+
 
 func _ready() -> void:
-	# Initialize the dungeon
+	# Initialize theme database
+	_theme_db = WorldThemeDatabase.new()
+	add_child(_theme_db)
+	
+	# Create transition overlay
+	_create_transition_overlay()
+	
+	# Generate initial level
 	generate_level()
+
+
+func _create_transition_overlay() -> void:
+	"""Create a transition overlay for drift effects"""
+	_transition_overlay = ColorRect.new()
+	_transition_overlay.color = Color.BLACK
+	_transition_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_transition_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_transition_overlay.visible = false
+	
+	# Add to canvas layer for proper rendering
+	var canvas_layer = CanvasLayer.new()
+	canvas_layer.add_child(_transition_overlay)
+	get_tree().current_scene.add_child(canvas_layer)
 
 
 func generate_level(new_seed: int = 0) -> void:
@@ -26,13 +56,65 @@ func generate_level(new_seed: int = 0) -> void:
 	
 	print("Level: Generating with seed ", _level_seed)
 	
+	# Get theme for world 0 (starting world)
+	_current_theme = _theme_db.get_theme_for_world_id(0)
+	
 	# Delegate to DungeonGenerator
 	dungeon_generator.generate_dungeon(_level_seed)
+	
+	# Apply theme colors
+	_apply_theme_to_tilemap()
+	
+	print("Level: Generation complete")
 
 
 func regenerate_level() -> void:
 	"""Regenerate the level with the same seed"""
 	generate_level(_level_seed)
+
+
+func regenerate_level_with_seed(new_seed: int) -> void:
+	"""Regenerate the level with a new seed (used during drift)"""
+	# Play transition effect
+	_play_drift_transition()
+	
+	# Generate new level
+	_level_seed = new_seed
+	_current_theme = _theme_db.get_theme_for_world_id(get_parent().world_id if get_parent() else 0)
+	
+	dungeon_generator.generate_dungeon(_level_seed)
+	_apply_theme_to_tilemap()
+	
+	print("Level: Regenerated with seed ", _level_seed, " and theme ", _current_theme.display_name)
+
+
+func _play_drift_transition() -> void:
+	"""Play visual transition effect for drifting"""
+	if _transition_overlay:
+		_transition_overlay.visible = true
+		
+		# Fade to white then back
+		var tween = create_tween()
+		tween.tween_property(_transition_overlay, "color", Color.WHITE, 0.3)
+		tween.tween_property(_transition_overlay, "color", Color.BLACK, 0.3)
+		tween.tween_callback(func(): if _transition_overlay: _transition_overlay.visible = false)
+
+
+func apply_theme(theme: WorldTheme) -> void:
+	"""Apply a world theme to the level"""
+	_current_theme = theme
+	_apply_theme_to_tilemap()
+	
+	print("Level: Applied theme: ", theme.display_name)
+
+
+func _apply_theme_to_tilemap() -> void:
+	"""Apply theme colors to the TileMap"""
+	if not tile_map or not _current_theme:
+		return
+	
+	# Apply floor color modulation
+	tile_map.modulate = _current_theme.floor_color
 
 
 func get_player_spawn_position() -> Vector2:
@@ -60,6 +142,46 @@ func clear_level() -> void:
 	dungeon_generator.clear_dungeon()
 
 
+func get_theme() -> WorldTheme:
+	"""Get the current world theme"""
+	return _current_theme
+
+
 func _on_dungeon_generated() -> void:
 	"""Signal handler called when dungeon generation is complete"""
 	print("Level: Dungeon generation complete. Rooms: ", get_room_count())
+
+
+func get_enemy_spawn_rate() -> float:
+	"""Get the enemy spawn rate modified by theme"""
+	if _current_theme:
+		return _current_theme.get_enemy_spawn_rate(1.0)
+	return 1.0
+
+
+func get_resource_spawn_rate() -> float:
+	"""Get the resource spawn rate modified by theme"""
+	if _current_theme:
+		return _current_theme.get_resource_spawn_rate(1.0)
+	return 1.0
+
+
+func get_hazards() -> Array:
+	"""Get the hazards present in this world"""
+	if _current_theme:
+		return _current_theme.hazards
+	return []
+
+
+func is_hard_mode() -> bool:
+	"""Check if current world is hard mode"""
+	if _current_theme:
+		return _current_theme.is_hard_mode
+	return false
+
+
+func is_easy_mode() -> bool:
+	"""Check if current world is easy mode"""
+	if _current_theme:
+		return _current_theme.is_easy_mode
+	return false
