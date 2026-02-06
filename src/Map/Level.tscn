@@ -19,3 +19,14 @@ target_room_count = 30
 tile_set = ExtResource("2_tileset")
 format = 2
 layer_0/tile_data = PackedInt32Array()
+
+[node name="EnemySpawner" type="Node2D" parent="."]
+script = null
+enemy_scene = null
+fast_enemy_scene = null
+use_variants = true
+enemy_count = 5
+min_enemies_per_room = 0
+max_enemies_per_room = 2
+spawn_enabled = true
+fast_enemy_ratio = 0.4

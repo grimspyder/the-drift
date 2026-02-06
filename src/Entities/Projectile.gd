@@ -6,8 +6,8 @@ extends Area2D
 ## Projectile lifetime in seconds
 @export var lifetime: float = 3.0
 
-## Damage amount (for future use)
-@export var damage: float = 10.0
+## Damage amount
+@export var damage: float = 25.0
 
 ## Direction the projectile is moving
 var direction: Vector2 = Vector2.RIGHT
@@ -36,7 +36,12 @@ func _ready() -> void:
 	collision_shape.position = Vector2.ZERO
 	add_child(collision_shape)
 
-	# Connect collision signal (for future enemy interaction)
+	# Set collision layer/mask
+	# Layer 3: Projectiles, Mask 4: Enemies
+	collision_layer = 4   # Projectiles layer
+	collision_mask = 8    # Can hit enemies
+	
+	# Connect collision signals
 	body_entered.connect(_on_body_entered)
 	area_entered.connect(_on_area_entered)
 
@@ -65,13 +70,23 @@ func set_direction(new_direction: Vector2) -> void:
 
 
 func _on_body_entered(body: Node) -> void:
-	# TODO: Implement damage logic when enemies are added
+	# Check if we hit an enemy
+	if body.has_method("take_damage"):
+		body.take_damage(damage)
+		queue_free()
+		return
+	
+	# Hit walls or other solid objects
+	if body.collision_layer == 2:  # Walls layer
+		queue_free()
+		return
+	
 	print("Projectile hit body: ", body.name)
 	queue_free()
 
 
 func _on_area_entered(area: Area2D) -> void:
-	# TODO: Handle other projectile collisions
+	# Handle other projectile collisions
 	print("Projectile hit area: ", area.name)
 	queue_free()
 

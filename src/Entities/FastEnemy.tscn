@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bxvFastEnemy001"]
+
+[ext_resource type="Script" path="res://src/Entities/FastEnemy.gd" id="1_fenemy"]
+
+[node name="FastEnemy" type="CharacterBody2D"]
+script = ExtResource("1_fenemy")
