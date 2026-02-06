@@ -1,0 +1,125 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.2.1
+  GODOT_ARCHIVE: Godot_v4.2.1-stable_linux.x86_64.zip
+  PROJECT_PATH: ./
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            preset: "Linux/X11"
+            artifact_name: the-drift.x86_64
+            artifact_path: releases/linux/
+          - os: windows-latest
+            preset: "Windows Desktop"
+            artifact_name: The Drift.exe
+            artifact_path: releases/windows/
+          - os: macos-latest
+            preset: "macOS"
+            artifact_name: The Drift.dmg
+            artifact_path: releases/macos/
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        lfs: true
+
+    - name: Download Godot (${{ matrix.os }})
+      shell: bash
+      run: |
+        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          GODOT_ARCHIVE="Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          wget -q https://downloads.tuxfamily.org/godotengine/${GODOT_VERSION}/mono/${GODOT_ARCHIVE}
+        elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          GODOT_ARCHIVE="Godot_v${GODOT_VERSION}-stable_win64.exe.zip"
+          Invoke-WebRequest -Uri "https://downloads.tuxfamily.org/godotengine/${GODOT_VERSION}/mono/${GODOT_ARCHIVE}" -OutFile "${GODOT_ARCHIVE}"
+        elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+          GODOT_ARCHIVE="Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          wget -q https://downloads.tuxfamily.org/godotengine/${GODOT_VERSION}/mono/${GODOT_ARCHIVE}
+        fi
+        
+        unzip -q ${GODOT_ARCHIVE}
+        ls -la
+
+    - name: Setup Godot (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot
+        chmod +x godot
+
+    - name: Setup Godot (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        mv Godot_v${GODOT_VERSION}-stable_win64.exe godot.exe
+
+    - name: Setup Godot (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        mv Godot_v${GODOT_VERSION}-stable_macos.universal/Godot.app/Contents/MacOS/Godot godot
+        chmod +x godot
+
+    - name: Create export directory
+      run: mkdir -p releases/{windows,linux,macos}
+
+    - name: Export ${{ matrix.preset }}
+      shell: bash
+      run: |
+        if [[ "${{ runner.os }}" == "Linux" ]]; then
+          ./godot --headless --export-release "${{ matrix.preset }}" 2>&1 || exit 1
+        elif [[ "${{ runner.os }}" == "Windows" ]]; then
+          ./godot.exe --headless --export-release "${{ matrix.preset }}" 2>&1 || exit 1
+        elif [[ "${{ runner.os }}" == "macOS" ]]; then
+          ./godot --headless --export-release "${{ matrix.preset }}" 2>&1 || exit 1
+        fi
+
+    - name: List build artifacts
+      shell: bash
+      run: |
+        echo "Build artifacts:"
+        find releases/ -type f 2>/dev/null | sort
+
+    - name: Upload artifact to Actions
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.preset }}-${{ matrix.os }}
+        path: releases/
+        retention-days: 7
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/create-release@v1
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: true
+
+    - name: Upload Release Assets
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ matrix.artifact_path }}/${{ matrix.artifact_name }}
+        asset_name: ${{ matrix.artifact_name }}-${{ github.ref_name }}
+        asset_content_type: application/octet-stream
