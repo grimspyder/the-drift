@@ -33,6 +33,11 @@ extends CanvasLayer
 @onready var theme_container: Control = $ThemeContainer
 @onready var theme_label: Label = $ThemeContainer/ThemeLabel
 
+# Warning container for visual warnings
+var warning_container: Control
+var warning_label: Label
+var _warning_timer: Timer
+
 # -------------------------------------------------------------------------
 # Game References
 # -------------------------------------------------------------------------
@@ -58,6 +63,19 @@ func _ready() -> void:
 	_update_timer.timeout.connect(_on_update_timer_timeout)
 	_update_timer.autostart = true
 	add_child(_update_timer)
+	
+	# Set up warning timer
+	_warning_timer = Timer.new()
+	_warning_timer.wait_time = 3.0  # Warning shown for 3 seconds
+	_warning_timer.one_shot = true
+	_warning_timer.timeout.connect(_on_warning_timer_timeout)
+	add_child(_warning_timer)
+	
+	# Create warning UI
+	_create_warning_ui()
+	
+	# Add to HUD group for easy access from GameManager
+	add_to_group("hud")
 	
 	# Initial UI update
 	_update_all_ui()
@@ -151,11 +169,16 @@ func _update_drift_counter() -> void:
 	drift_number_label.text = "Drift #%d" % drift_number
 	drift_remaining_label.text = "Remaining: %d" % drifts_remaining
 	
-	# Change color if low on drifts
-	if drifts_remaining <= 2:
-		drift_remaining_label.modulate = Color(0.9, 0.3, 0.3)  # Red warning
+	# Change color based on remaining drifts
+	if drifts_remaining <= 1:
+		drift_remaining_label.modulate = Color(1.0, 0.2, 0.2)  # Critical red
+		drift_remaining_label.add_theme_font_size_override("font_size", 18)
+	elif drifts_remaining <= 2:
+		drift_remaining_label.modulate = Color(1.0, 0.6, 0.2)  # Orange warning
+		drift_remaining_label.add_theme_font_size_override("font_size", 16)
 	else:
 		drift_remaining_label.modulate = Color(0.9, 0.9, 0.9)  # Normal white
+		drift_remaining_label.add_theme_font_size_override("font_size", 14)
 
 
 func _update_timer() -> void:
@@ -170,12 +193,17 @@ func _update_timer() -> void:
 	elapsed_time_label.text = "Elapsed: %s" % elapsed
 	remaining_time_label.text = "Left: %s" % remaining
 	
-	# Show warning if time is running low (under 5 minutes)
+	# Show warnings based on time remaining
 	var remaining_seconds = _parse_time_string(remaining)
-	if remaining_seconds < 300:  # 5 minutes
-		remaining_time_label.modulate = Color(0.9, 0.3, 0.3)  # Red warning
-	else:
+	if remaining_seconds < 60:  # Under 1 minute - critical
+		remaining_time_label.modulate = Color(1.0, 0.2, 0.2)  # Critical red
+		remaining_time_label.add_theme_font_size_override("font_size", 18)
+	elif remaining_seconds < 300:  # Under 5 minutes - warning
+		remaining_time_label.modulate = Color(1.0, 0.6, 0.2)  # Orange warning
+		remaining_time_label.add_theme_font_size_override("font_size", 16)
+	else:  # Normal
 		remaining_time_label.modulate = Color(0.9, 0.9, 0.9)  # Normal white
+		remaining_time_label.add_theme_font_size_override("font_size", 14)
 
 
 func _parse_time_string(time_str: String) -> int:
@@ -265,6 +293,70 @@ func update_all_ui() -> void:
 # -------------------------------------------------------------------------
 # Visual Feedback Functions
 # -------------------------------------------------------------------------
+
+func _create_warning_ui() -> void:
+	"""Create warning UI container"""
+	warning_container = Control.new()
+	warning_container.name = "WarningContainer"
+	warning_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	warning_container.offset_top = 150
+	warning_container.offset_bottom = 220
+	warning_container.visible = false
+	add_child(warning_container)
+	
+	warning_label = Label.new()
+	warning_label.name = "WarningLabel"
+	warning_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	warning_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	warning_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	warning_label.add_theme_font_size_override("font_size", 28)
+	warning_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+	warning_container.add_child(warning_label)
+
+
+func show_time_warning() -> void:
+	"""Show warning when time is running low"""
+	if not warning_container:
+		return
+	
+	warning_label.text = "⚠️ WARNING: 5 MINUTES REMAINING! ⚠️"
+	warning_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))  # Yellow-orange
+	warning_container.visible = true
+	
+	# Pulse animation
+	var tween = create_tween()
+	tween.tween_property(warning_container, "modulate:a", 1.0, 0.3)
+	tween.tween_property(warning_container, "modulate:a", 0.5, 0.3)
+	tween.tween_property(warning_container, "modulate:a", 1.0, 0.3)
+	
+	# Auto-hide after timer
+	_warning_timer.start()
+
+
+func show_drift_warning() -> void:
+	"""Show warning when drifts are running low"""
+	if not warning_container:
+		return
+	
+	warning_label.text = "⚠️ WARNING: 2 DRIFTS REMAINING! ⚠️"
+	warning_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))  # Red
+	warning_container.visible = true
+	
+	# Pulse animation
+	var tween = create_tween()
+	tween.tween_property(warning_container, "modulate:a", 1.0, 0.3)
+	tween.tween_property(warning_container, "modulate:a", 0.5, 0.3)
+	tween.tween_property(warning_container, "modulate:a", 1.0, 0.3)
+	
+	# Auto-hide after timer
+	_warning_timer.start()
+
+
+func _on_warning_timer_timeout() -> void:
+	"""Hide warning after timer expires"""
+	if warning_container:
+		warning_container.visible = false
+
 
 func flash_health_bar(flash_color: Color = Color(1.0, 1.0, 1.0, 0.8)) -> void:
 	# Flash the health bar white for damage feedback

@@ -51,8 +51,19 @@ var _exit_stairs: Node2D
 ## Win screen instance
 var _win_screen: Control
 
+## Game over screen instance
+var _game_over_screen: Control
+
 ## Whether game has been won
 var game_won: bool = false
+
+## Warning thresholds
+var _time_warning_shown: bool = false
+var _drift_warning_shown: bool = false
+
+const TIME_WARNING_THRESHOLD: float = 300.0  # 5 minutes remaining
+const TIME_CRITICAL_THRESHOLD: float = 60.0    # 1 minute remaining
+const DRIFT_WARNING_THRESHOLD: int = 8         # 2 drifts remaining
 
 
 func _ready() -> void:
@@ -122,14 +133,18 @@ func _complete_drift_after_delay() -> void:
 	# Increment drift count
 	drift_count += 1
 	
-	# Check for game over
+	# Reset warnings for new drift
+	_time_warning_shown = false
+	_drift_warning_shown = false
+	
+	# Check for game over (drift limit reached)
 	if drift_count >= max_drifts:
-		game_over("Too many drifts! Game Over.")
+		game_over("Too Many Drifts!")
 		return
 	
 	# Check session time
 	if session_time >= max_session_time:
-		game_over("Session time limit reached!")
+		game_over("Time Expired!")
 		return
 	
 	# Increment world ID (changes world theme)
@@ -326,12 +341,12 @@ func game_over(reason: String) -> void:
 	game_active = false
 	print("GameManager: GAME OVER - ", reason)
 	
-	# TODO: Show game over screen with stats
+	# Show game over screen with stats
 	_show_game_over_screen(reason)
 
 
 func _show_game_over_screen(reason: String) -> void:
-	"""Display game over information"""
+	"""Display game over screen with statistics"""
 	print("=")
 	print("GAME OVER")
 	print("=")
@@ -339,7 +354,30 @@ func _show_game_over_screen(reason: String) -> void:
 	print("Worlds explored: ", world_id + 1)
 	print("Total drifts: ", drift_count)
 	print("Session time: ", get_session_formatted())
+	print("Enemies defeated: ", enemies_killed)
 	print("=")
+	
+	# Load and show game over screen
+	var game_over_scene = load("res://src/UI/GameOverScreen.tscn")
+	if game_over_scene:
+		_game_over_screen = game_over_scene.instantiate()
+		get_tree().current_scene.add_child(_game_over_screen)
+		
+		# Set game over reason
+		_game_over_screen.set_game_over_reason(reason)
+		
+		# Set statistics
+		_game_over_screen.set_stats(
+			get_session_formatted(),
+			drift_count,
+			enemies_killed,
+			world_id + 1
+		)
+		
+		# Show with animation
+		_game_over_screen.show_game_over()
+		
+		print("GameOverScreen: Game over screen displayed")
 
 
 func get_drift_remaining() -> int:
@@ -372,7 +410,46 @@ func _process(delta: float) -> void:
 		
 		# Check session time limit
 		if session_time >= max_session_time:
-			game_over("Session time limit reached!")
+			game_over("Time Expired!")
+			return
+		
+		# Check for pre-warnings
+		_check_warnings()
+
+
+func _check_warnings() -> void:
+	"""Check and display pre-warnings for time and drift limits"""
+	
+	# Time warning at 5 minutes remaining
+	var time_remaining = max_session_time - session_time
+	if time_remaining <= TIME_WARNING_THRESHOLD and not _time_warning_shown:
+		_time_warning_shown = true
+		_show_time_warning()
+	
+	# Drift warning at 2 drifts remaining
+	if drift_count >= DRIFT_WARNING_THRESHOLD and not _drift_warning_shown:
+		_drift_warning_shown = true
+		_show_drift_warning()
+
+
+func _show_time_warning() -> void:
+	"""Show warning when time is running low"""
+	print("GameManager: WARNING - 5 minutes remaining!")
+	
+	# Get HUD and show warning
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_time_warning"):
+		hud.show_time_warning()
+
+
+func _show_drift_warning() -> void:
+	"""Show warning when drifts are running low"""
+	print("GameManager: WARNING - 2 drifts remaining!")
+	
+	# Get HUD and show warning
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_drift_warning"):
+		hud.show_drift_warning()
 
 
 func get_world_info() -> Dictionary:
