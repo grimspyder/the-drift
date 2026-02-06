@@ -13,7 +13,7 @@ extends Node2D
 @export var use_variants: bool = true
 
 ## Number of enemies to spawn per level
-@export var enemy_count: int = 5
+@export var enemy_count: int = 12
 
 ## Minimum enemies per room (can be 0)
 @export var min_enemies_per_room: int = 0

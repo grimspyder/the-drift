@@ -79,6 +79,9 @@ func _ready() -> void:
 	collision_layer = 8   # Enemy layer (layer 4)
 	collision_mask = 3    # Collides with player (1) + walls (2)
 	
+	# Apply difficulty scaling based on drift count
+	_apply_difficulty_scaling()
+	
 	# Create damage label
 	damage_label = Label.new()
 	damage_label.name = "DamageLabel"
@@ -209,3 +212,35 @@ func _show_damage_number(amount: float) -> void:
 		damage_label.modulate.a = 1.0
 		tween.tween_property(damage_label, "position:y", -50, 0.5)
 		tween.tween_property(damage_label, "modulate:a", 0.0, 0.5)
+
+
+# -------------------------------------------------------------------------
+# Difficulty Scaling
+# -------------------------------------------------------------------------
+
+func _apply_difficulty_scaling() -> void:
+	"""Apply difficulty multiplier based on current drift count."""
+	var multiplier = _get_difficulty_multiplier()
+	
+	# Scale max health
+	var base_max_health = 100.0
+	health.max_health = base_max_health * multiplier
+	health.current_health = health.max_health
+	
+	# Scale damage to player
+	var base_damage = 10.0
+	damage_to_player = base_damage * multiplier
+
+
+func _get_difficulty_multiplier() -> float:
+	"""Calculate difficulty multiplier based on drift count.
+	Drift 0 = 1.0x, Drift 10 = 2.0x (linear scaling)
+	"""
+	var game_manager = get_node_or_null("/root/GameManager")
+	if not game_manager:
+		return 1.0
+	
+	var drift_count = game_manager.drift_count
+	
+	# Linear scaling: +10% per drift, capped at 2.0x
+	return 1.0 + (drift_count * 0.1)
