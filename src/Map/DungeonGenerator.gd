@@ -473,6 +473,12 @@ func _ready() -> void:
 		push_error("DungeonGenerator: TileMap not found! Please assign tile_map_path or add a TileMap child node.")
 		return
 	
+	# Configure TileMap physics layers for wall collision
+	if _tile_map:
+		_tile_map.collision_layer = 2  # Walls layer
+		_tile_map.collision_mask = 0   # Walls don't collide with anything
+		print("DungeonGenerator: TileMap physics setup - Layer 2, Mask 0")
+	
 	print("DungeonGenerator ready. Map size: ", map_width, "x", map_height)
 	
 	# Auto-generate dungeon on ready (can be disabled in inspector)
