@@ -40,10 +40,10 @@ func _ready() -> void:
 	add_child(collision_shape)
 
 	# Set collision layer/mask
-	# Layer 3: Projectiles
-	# Mask 2: Walls, Mask 4: Enemies
-	collision_layer = 3 # Projectiles layer
-	collision_mask = 2 | 4 # Can hit Walls AND Enemies
+	# Layer 3: Projectiles (bit value 4)
+	# Mask 2: Walls, Mask 8: Enemies
+	collision_layer = 4 # Projectiles layer (correct: layer 3's bit value is 4)
+	collision_mask = 2 | 8 # Can hit Walls AND Enemies
 	
 	# Connect collision signals
 	body_entered.connect(_on_body_entered)
