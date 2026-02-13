@@ -95,6 +95,9 @@ func generate_dungeon(passed_seed: int = 0) -> void:
 	# Clear existing tiles
 	_clear_tilemap()
 	
+	# Fill map with walls
+	_fill_with_walls()
+	
 	# Generate rooms
 	_rooms.clear()
 	_generate_rooms()
@@ -102,7 +105,7 @@ func generate_dungeon(passed_seed: int = 0) -> void:
 	# Generate tunnels connecting rooms
 	_connect_rooms()
 	
-	# Generate outer walls
+	# Generate outer walls (reinforce boundary, though filled map covers it)
 	_generate_boundary_walls()
 	
 	print("DungeonGenerator: Generated ", _rooms.size(), " rooms")
@@ -413,6 +416,13 @@ func _carve_v_tunnel(y1: int, y2: int, x: int) -> void:
 # Boundary Walls
 # -------------------------------------------------------------------------
 
+func _fill_with_walls() -> void:
+	"""Fill the entire map area with wall tiles"""
+	for x in range(map_width):
+		for y in range(map_height):
+			_set_wall_tile(x, y)
+
+
 func _generate_boundary_walls() -> void:
 	"""Generate walls around the dungeon perimeter"""
 	# Top and bottom walls
@@ -475,8 +485,8 @@ func _ready() -> void:
 	
 	# Configure TileMap physics layers for wall collision
 	if _tile_map:
-		_tile_map.collision_layer = 2  # Walls layer
-		_tile_map.collision_mask = 0   # Walls don't collide with anything
+		_tile_map.collision_layer = 2 # Walls layer
+		_tile_map.collision_mask = 0 # Walls don't collide with anything
 		print("DungeonGenerator: TileMap physics setup - Layer 2, Mask 0")
 	
 	print("DungeonGenerator ready. Map size: ", map_width, "x", map_height)

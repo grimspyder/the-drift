@@ -162,6 +162,12 @@ func _move_toward_player(delta: float) -> void:
 		rotation = direction.angle()
 
 
+func take_damage(amount: float) -> void:
+	"""Apply damage to the enemy"""
+	if health:
+		health.take_damage(amount)
+
+
 func _attack_player() -> void:
 	if _player == null or not _player.has_method("take_damage"):
 		return

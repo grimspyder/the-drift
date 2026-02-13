@@ -90,7 +90,7 @@ func _ready() -> void:
 	if collision_shape == null:
 		collision_shape = CollisionShape2D.new()
 		var shape = RectangleShape2D.new()
-		shape.size = Vector2(32, 32) # Match sprite size
+		shape.size = Vector2(24, 24) # Match sprite size
 		collision_shape.shape = shape
 		collision_shape.position = Vector2.ZERO
 		add_child(collision_shape)
@@ -138,11 +138,18 @@ func _create_placeholder_texture() -> Texture2D:
 	# Create a simple colored square texture
 	var image = Image.create(64, 64, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0.2, 0.6, 0.9)) # Blue color
-	# Add a simple border
+	
 	for x in range(64):
 		for y in range(64):
+			# Border
 			if x < 4 or x >= 60 or y < 4 or y >= 60:
 				image.set_pixel(x, y, Color(0.1, 0.4, 0.7))
+			
+			# Direction Indicator (Visor on the right side)
+			# Godot 0 degrees is RIGHT, so we draw on the right side
+			if x > 44 and x < 60 and abs(y - 32) < 12:
+				image.set_pixel(x, y, Color(0.8, 0.9, 1.0)) # Light blue/white visor
+				
 	return ImageTexture.create_from_image(image)
 
 
