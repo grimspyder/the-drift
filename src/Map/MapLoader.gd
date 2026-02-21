@@ -54,48 +54,62 @@ static func apply_map(map_data: Dictionary, tile_map: TileMap) -> bool:
 	
 	var width: int = int(map_data.get("width", 0))
 	var height: int = int(map_data.get("height", 0))
-	var map_tiles: Array = map_data.get("tiles", [])
 	var version: int = int(map_data.get("version", 1))
 	
-	if map_tiles.size() == 0:
-		push_error("MapLoader: No tile data in map!")
-		return false
-	
-	print("MapLoader: Applying ", width, "x", height, " map v", version, " (", map_tiles.size(), " rows)")
-	
 	tile_map.clear()
-	
 	var placed = 0
-	for y in range(map_tiles.size()):
-		var row = map_tiles[y]
-		if not row is Array:
-			continue
-		for x in range(row.size()):
-			var cell = row[x]
-			var atlas_coord: Vector2i
-			
-			if version >= 2:
-				# V2 format: each cell is [col, row, funcIndex] or 0 (void)
-				if cell is Array and cell.size() >= 2:
-					atlas_coord = Vector2i(int(cell[0]), int(cell[1]))
-				elif cell == null or (cell is float and cell == 0) or (cell is int and cell == 0):
-					continue # Void
+	
+	if version >= 3:
+		# V3 format: walkable boolean grid (true = floor, false = wall)
+		var walkable: Array = map_data.get("walkable", [])
+		if walkable.size() == 0:
+			push_error("MapLoader: No walkable data in v3 map!")
+			return false
+		print("MapLoader: Applying v3 walkable map ", width, "x", height)
+		for y in range(walkable.size()):
+			var row = walkable[y]
+			if not row is Array:
+				continue
+			for x in range(row.size()):
+				var is_floor = row[x]
+				# Floor = atlas (1,0), Wall = atlas (0,0)
+				var atlas_coord = Vector2i(1, 0) if is_floor else Vector2i(0, 0)
+				tile_map.set_cell(0, Vector2i(x, y), 0, atlas_coord)
+				placed += 1
+	else:
+		# V1/V2 format: tile arrays
+		var map_tiles: Array = map_data.get("tiles", [])
+		if map_tiles.size() == 0:
+			push_error("MapLoader: No tile data in map!")
+			return false
+		print("MapLoader: Applying v", version, " map ", width, "x", height, " (", map_tiles.size(), " rows)")
+		for y in range(map_tiles.size()):
+			var row = map_tiles[y]
+			if not row is Array:
+				continue
+			for x in range(row.size()):
+				var cell = row[x]
+				var atlas_coord: Vector2i
+				
+				if version >= 2:
+					if cell is Array and cell.size() >= 2:
+						atlas_coord = Vector2i(int(cell[0]), int(cell[1]))
+					elif cell == null or (cell is float and cell == 0) or (cell is int and cell == 0):
+						continue
+					else:
+						continue
 				else:
-					continue
-			else:
-				# V1 format: integer tile IDs
-				var tile_id: int = int(cell) if cell != null else 0
-				if tile_id == 0:
-					continue # Void
-				# Solid types use wall tile (0,0), rest use floor tile (1,0)
-				match tile_id:
-					1, 8, 9, 10, 11, 12, 13, 16, 17:
-						atlas_coord = Vector2i(0, 0)
-					_:
-						atlas_coord = Vector2i(1, 0)
-			
-			tile_map.set_cell(0, Vector2i(x, y), 0, atlas_coord)
-			placed += 1
+					var tile_id: int = int(cell) if cell != null else 0
+					if tile_id == 0:
+						continue
+					match tile_id:
+						1, 8, 9, 10, 11, 12, 13, 16, 17:
+							atlas_coord = Vector2i(0, 0)
+						_:
+							atlas_coord = Vector2i(1, 0)
+				
+				tile_map.set_cell(0, Vector2i(x, y), 0, atlas_coord)
+				placed += 1
 	
 	print("MapLoader: Placed ", placed, " tiles")
 	return true
@@ -124,18 +138,29 @@ static func get_enemy_spawns(map_data: Dictionary) -> Array:
 
 ## Check if a tile at given position is solid (for collision purposes)
 static func is_tile_solid(map_data: Dictionary, x: int, y: int) -> bool:
-	var map_tiles = map_data.get("tiles", [])
 	var version = int(map_data.get("version", 1))
+
+	if version >= 3:
+		# V3: boolean walkable grid — not walkable = solid
+		var walkable: Array = map_data.get("walkable", [])
+		if y < 0 or y >= walkable.size():
+			return true
+		var row = walkable[y]
+		if not row is Array or x < 0 or x >= row.size():
+			return true
+		return not bool(row[x])
+
+	var map_tiles = map_data.get("tiles", [])
 	if y < 0 or y >= map_tiles.size():
-		return true # Out of bounds = solid
+		return true
 	var row = map_tiles[y]
 	if x < 0 or x >= row.size():
 		return true
 	var cell = row[x]
-	
+
 	if version >= 2:
 		if cell is Array and cell.size() >= 3:
-			return int(cell[2]) == FUNC_SOLID # func index 0 = solid
+			return int(cell[2]) == FUNC_SOLID
 		return false
 	else:
 		var tid = int(cell) if cell != null else 0

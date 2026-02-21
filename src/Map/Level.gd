@@ -6,6 +6,8 @@ extends Node2D
 ## Preload MapLoader script (class_name may not be available without .uid)
 const MapLoaderScript = preload("res://src/Map/MapLoader.gd")
 
+const TILE_SIZE: int = 32
+
 ## DungeonGenerator reference
 @onready var dungeon_generator: Node2D = $DungeonGenerator
 
@@ -65,9 +67,12 @@ func generate_level(new_seed: int = 0) -> void:
 	# Try custom map first, then fall back to procedural
 	var map_data = MapLoaderScript.load_map(0)
 	if not map_data.is_empty():
-		# Custom map: build a fresh tileset from code and apply
-		_setup_custom_map_tileset()
-		_apply_custom_map(map_data, 0)
+		var version = int(map_data.get("version", 1))
+		if version >= 3:
+			_apply_image_map(map_data, 0)
+		else:
+			_setup_custom_map_tileset()
+			_apply_custom_map(map_data, 0)
 	else:
 		# Procedural: apply theme tileset then generate
 		_apply_theme_to_tilemap()
@@ -168,7 +173,11 @@ func regenerate_level_with_seed(new_seed: int) -> void:
 	# Try custom map first, then fall back to procedural
 	var map_data = MapLoaderScript.load_map(world_id)
 	if not map_data.is_empty():
-		_apply_custom_map(map_data, world_id)
+		var version = int(map_data.get("version", 1))
+		if version >= 3:
+			_apply_image_map(map_data, world_id)
+		else:
+			_apply_custom_map(map_data, world_id)
 	else:
 		dungeon_generator.apply_theme_settings(_current_theme)
 		dungeon_generator.generate_dungeon(_level_seed)
@@ -195,6 +204,134 @@ func apply_theme(theme: WorldTheme) -> void:
 	_apply_theme_to_tilemap()
 	
 	print("Level: Applied theme: ", theme.display_name)
+
+
+func _apply_image_map(map_data: Dictionary, world_id: int) -> void:
+	"""Apply a v3 image-based map: uploaded image as background, walkable grid for collision."""
+	var width: int = int(map_data.get("width", 0))
+	var height: int = int(map_data.get("height", 0))
+	print("Level: Loading v3 image map for world ", world_id, " (", width, "x", height, ")")
+
+	# Remove any previous background sprite
+	_clear_map_background()
+
+	# Decode and place the embedded image as a background Sprite2D
+	var image_data_str: String = map_data.get("image_data", "")
+	if image_data_str != "":
+		var texture = _decode_base64_image(image_data_str)
+		if texture:
+			_place_map_background(texture, width, height)
+		else:
+			push_error("Level: Failed to decode embedded map image")
+	else:
+		print("Level: v3 map has no image_data — rendering without background")
+
+	# Set up a collision-only tileset (transparent tiles, walls have physics)
+	_setup_collision_only_tileset()
+
+	# Apply walkable grid to TileMap (wall = atlas 0,0 with collision, floor = atlas 1,0)
+	MapLoaderScript.apply_map(map_data, tile_map)
+
+	# Place player spawn and exit
+	var spawn_pos = MapLoaderScript.get_player_start(map_data)
+	dungeon_generator._player_spawn_point = spawn_pos
+	print("Level: Image map player start at ", spawn_pos)
+
+	var exit_pos = MapLoaderScript.get_exit_position(map_data)
+	_spawn_exit_at(exit_pos, world_id)
+
+	print("Level: v3 image map loaded — ", width, "x", height)
+
+
+func _decode_base64_image(data_url: String) -> ImageTexture:
+	"""Decode a base64 data URL (data:image/png;base64,...) into an ImageTexture."""
+	var comma = data_url.find(",")
+	if comma == -1:
+		push_error("Level: Invalid image data URL (no comma separator)")
+		return null
+
+	var b64 = data_url.substr(comma + 1)
+	var bytes: PackedByteArray = Marshalls.base64_to_raw(b64)
+	if bytes.is_empty():
+		push_error("Level: base64 decode produced empty buffer")
+		return null
+
+	var img = Image.new()
+	var err = img.load_png_from_buffer(bytes)
+	if err != OK:
+		# Try JPG as fallback
+		err = img.load_jpg_from_buffer(bytes)
+	if err != OK:
+		push_error("Level: Could not decode image from buffer, error: " + str(err))
+		return null
+
+	img.convert(Image.FORMAT_RGBA8)
+	print("Level: Decoded map image: ", img.get_width(), "x", img.get_height())
+	return ImageTexture.create_from_image(img)
+
+
+func _place_map_background(texture: ImageTexture, map_w: int, map_h: int) -> void:
+	"""Add a Sprite2D behind the TileMap displaying the full map image."""
+	var sprite = Sprite2D.new()
+	sprite.name = "MapBackground"
+	sprite.texture = texture
+	sprite.z_index = -10
+
+	# Center the sprite on the map area (tiles start at TileMap origin)
+	var map_pixel_w = map_w * TILE_SIZE
+	var map_pixel_h = map_h * TILE_SIZE
+	sprite.position = tile_map.position + Vector2(map_pixel_w * 0.5, map_pixel_h * 0.5)
+	sprite.scale = Vector2(
+		float(map_pixel_w) / float(texture.get_width()),
+		float(map_pixel_h) / float(texture.get_height())
+	)
+
+	add_child(sprite)
+	print("Level: Map background placed — ", map_pixel_w, "x", map_pixel_h, " px")
+
+
+func _clear_map_background() -> void:
+	"""Remove any existing background sprite from a previous map load."""
+	var existing = get_node_or_null("MapBackground")
+	if existing:
+		existing.queue_free()
+
+
+func _setup_collision_only_tileset() -> void:
+	"""Build a TileSet with fully transparent tiles so the image shows through,
+	but wall tiles (atlas 0,0) still have physics collision shapes."""
+	# 2x1 transparent texture: col 0 = wall slot, col 1 = floor slot
+	var img = Image.create(TILE_SIZE * 2, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	# Leave all pixels transparent
+	var texture = ImageTexture.create_from_image(img)
+
+	var tileset = TileSet.new()
+	tileset.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
+	tileset.add_physics_layer()
+	tileset.set_physics_layer_collision_layer(0, 2)
+	tileset.set_physics_layer_collision_mask(0, 0)
+
+	var source = TileSetAtlasSource.new()
+	source.texture = texture
+	source.texture_region_size = Vector2i(TILE_SIZE, TILE_SIZE)
+	source.create_tile(Vector2i(0, 0))  # wall
+	source.create_tile(Vector2i(1, 0))  # floor
+
+	tileset.add_source(source)
+
+	# Wall tile gets a full-cell collision polygon
+	var wall_data: TileData = source.get_tile_data(Vector2i(0, 0), 0)
+	if wall_data:
+		wall_data.set_collision_polygons_count(0, 1)
+		wall_data.set_collision_polygon_points(0, 0, PackedVector2Array([
+			Vector2(-16, -16), Vector2(16, -16),
+			Vector2(16, 16), Vector2(-16, 16)
+		]))
+
+	tile_map.tile_set = tileset
+	tile_map.clear()
+	tile_map.modulate = Color.WHITE
+	print("Level: Collision-only tileset ready")
 
 
 func _apply_custom_map(map_data: Dictionary, world_id: int) -> void:
