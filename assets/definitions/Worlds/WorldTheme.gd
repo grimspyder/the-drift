@@ -67,6 +67,21 @@ extends Resource
 ## Is this a "hard" world?
 @export var is_hard_mode: bool = false
 
+## Map width for this world (overrides default)
+@export var map_width: int = 80
+
+## Map height for this world (overrides default)
+@export var map_height: int = 45
+
+## Minimum room size for this world
+@export var min_room_size: int = 6
+
+## Maximum room size for this world
+@export var max_room_size: int = 10
+
+## Target room count for this world
+@export var target_room_count: int = 30
+
 ## Get a formatted difficulty description
 func get_difficulty_description() -> String:
 	if is_easy_mode:

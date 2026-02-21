@@ -115,6 +115,33 @@ func _register_all_themes() -> void:
 	ashen.is_hard_mode = true
 	register_theme(ashen)
 	
+	# Theme 5: Shadow Realm (purple/black, dark)
+	var shadow = WorldTheme.new()
+	shadow.theme_id = 5
+	shadow.display_name = "Shadow Realm"
+	shadow.description = "A dark dimension of shadows and void creatures. Navigation is difficult."
+	shadow.floor_color = Color(0.15, 0.12, 0.2)
+	shadow.wall_color = Color(0.08, 0.06, 0.12)
+	shadow.ambient_light_color = Color(0.3, 0.2, 0.4)
+	shadow.ambient_light_energy = 0.4
+	shadow.fog_color = Color(0.1, 0.08, 0.15)
+	shadow.fog_density = 0.08
+	shadow.enemy_spawn_rate_mod = 1.3
+	shadow.enemy_health_mod = 1.4
+	shadow.enemy_damage_mod = 1.5
+	shadow.resource_spawn_mod = 0.5
+	shadow.special_enemies = ["shadow_wraith", "void_beast"]
+	shadow.hazards = ["darkness", "void_portals"]
+	shadow.visual_overlay = "shadow_mist"
+	shadow.is_hard_mode = true
+	# Map settings for this world
+	shadow.map_width = 60 # Smaller map = more claustrophobic
+	shadow.map_height = 35
+	shadow.min_room_size = 4
+	shadow.max_room_size = 7
+	shadow.target_room_count = 20
+	register_theme(shadow)
+	
 	print("WorldThemeDatabase: Registered ", _themes.size(), " world themes")
 
 
@@ -125,7 +152,7 @@ func register_theme(theme: WorldTheme) -> void:
 func get_theme(theme_id: int) -> WorldTheme:
 	if _themes.has(theme_id):
 		return _themes[theme_id]
-	return _themes[0]  # Return Prime as fallback
+	return _themes[0] # Return Prime as fallback
 
 
 func get_current_theme() -> WorldTheme:

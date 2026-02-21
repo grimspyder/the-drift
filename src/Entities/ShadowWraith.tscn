@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://shadowwraith001"]
+
+[ext_resource type="Script" path="res://src/Entities/ShadowWraith.gd" id="1_shadowwraith"]
+
+[node name="ShadowWraith" type="CharacterBody2D"]
+script = ExtResource("1_shadowwraith")

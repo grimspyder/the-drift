@@ -1,10 +1,13 @@
 extends Area2D
 
-## ExitStairs - Exit point for completing a dungeon
-## Triggered when player touches the stairs, leading to a win condition
+## ExitStairs - Portal for advancing between levels
+## Triggered when player touches, leads to next level or win condition
 
-## Signal emitted when stairs are triggered
+## Signal emitted when portal is triggered
 signal stairs_entered
+
+## Signal emitted when player advances to next level
+signal portal_entered
 
 ## Visual sprite for the stairs
 var sprite: Sprite2D
@@ -20,6 +23,12 @@ var active: bool = true
 
 ## Particles for visual effect
 var particles: GPUParticles2D
+
+## Current world ID (determines behavior)
+var world_id: int = 0
+
+## Maximum world count (for win condition)
+var max_worlds: int = 6
 
 
 func _ready() -> void:
@@ -187,9 +196,16 @@ func _trigger_stairs() -> void:
 		return
 	
 	active = false
-	stairs_entered.emit()
 	
-	print("ExitStairs: Player reached exit!")
+	# Check if this is the final world
+	if world_id >= max_worlds - 1:
+		# Final world - emit stairs_entered for win
+		stairs_entered.emit()
+		print("ExitStairs: Player reached final portal in world ", world_id)
+	else:
+		# Not final world - emit portal_entered to advance
+		portal_entered.emit()
+		print("ExitStairs: Player reached portal in world ", world_id)
 	
 	# Play trigger effect
 	_play_trigger_effect()
@@ -221,6 +237,32 @@ func set_active(value: bool) -> void:
 func is_active() -> bool:
 	"""Check if stairs are active"""
 	return active
+
+
+func set_world_id(id: int) -> void:
+	"""Set the world ID for this portal"""
+	world_id = id
+	# Update visuals based on world
+	_update_portal_visuals()
+	print("ExitStairs: World ID set to ", world_id)
+
+
+func _update_portal_visuals() -> void:
+	"""Update portal appearance based on world theme"""
+	# Different colors for different worlds
+	var portal_color: Color
+	match world_id:
+		0: portal_color = Color(0.2, 0.5, 1.0) # Blue - Prime
+		1: portal_color = Color(0.2, 0.8, 0.4) # Green - Verdant
+		2: portal_color = Color(0.9, 0.7, 0.3) # Yellow - Arid
+		3: portal_color = Color(0.4, 0.5, 1.0) # Purple - Crystalline
+		4: portal_color = Color(0.8, 0.3, 0.2) # Red - Ashen
+		5: portal_color = Color(0.4, 0.2, 0.6) # Purple - Shadow
+		_: portal_color = Color(0.2, 0.5, 1.0)
+	
+	# Update particle color
+	if particles and particles.process_material:
+		particles.process_material.color = portal_color
 
 
 func _get_configuration_warnings() -> PackedStringArray:

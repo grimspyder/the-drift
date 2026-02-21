@@ -59,14 +59,14 @@ func generate_level(new_seed: int = 0) -> void:
 	# Get theme for world 0 (starting world)
 	_current_theme = _theme_db.get_theme_for_world_id(0)
 	
+	# Apply theme-specific settings to dungeon generator
+	dungeon_generator.apply_theme_settings(_current_theme)
+	
 	# Delegate to DungeonGenerator
 	dungeon_generator.generate_dungeon(_level_seed)
 	
-	# Place exit stairs (only in world 0 for dungeon completion)
-	var game_manager = get_node_or_null("/root/GameManager")
-	var is_world_zero = game_manager and game_manager.world_id == 0
-	if is_world_zero:
-		_place_exit_stairs()
+	# Place portal (in ALL levels - allows player to advance)
+	_place_portal(0)
 	
 	# Apply theme colors
 	_apply_theme_to_tilemap()
@@ -86,15 +86,22 @@ func regenerate_level_with_seed(new_seed: int) -> void:
 	
 	# Generate new level
 	_level_seed = new_seed
-	_current_theme = _theme_db.get_theme_for_world_id(get_parent().world_id if get_parent() else 0)
+	
+	# Get world_id from GameManager (access as property, not has())
+	var game_manager = get_node_or_null("/root/GameManager")
+	var world_id = 0
+	if game_manager and "world_id" in game_manager:
+		world_id = game_manager.world_id
+	
+	_current_theme = _theme_db.get_theme_for_world_id(world_id)
+	
+	# Apply theme-specific settings to dungeon generator
+	dungeon_generator.apply_theme_settings(_current_theme)
 	
 	dungeon_generator.generate_dungeon(_level_seed)
 	
-	# Place exit stairs only in world 0
-	var game_manager = get_node_or_null("/root/GameManager")
-	var is_world_zero = game_manager and game_manager.world_id == 0
-	if is_world_zero:
-		_place_exit_stairs()
+	# Place portal in ALL levels
+	_place_portal(world_id)
 	
 	_apply_theme_to_tilemap()
 	
@@ -131,8 +138,8 @@ func _apply_theme_to_tilemap() -> void:
 
 
 func get_player_spawn_position() -> Vector2:
-	"""Get the player spawn position (center of first room)"""
-	return dungeon_generator.get_first_room_center()
+	"""Get the player spawn position (valid floor position in first room, away from walls)"""
+	return dungeon_generator.get_player_spawn_point()
 
 
 func get_random_spawn_position() -> Vector2:
@@ -201,13 +208,19 @@ func is_easy_mode() -> bool:
 
 
 # -------------------------------------------------------------------------
-# Exit Stairs Placement
+# Portal Placement
 # -------------------------------------------------------------------------
 
-func _place_exit_stairs() -> void:
-	"""Place exit stairs in the dungeon for completing the level"""
+func _place_portal(world_id: int) -> void:
+	"""Place a portal in the dungeon that allows player to advance to the next level"""
 	if dungeon_generator and dungeon_generator.has_method("place_exit_stairs"):
-		var stairs_pos = dungeon_generator.place_exit_stairs()
-		print("Level: Exit stairs placed at ", stairs_pos)
+		var portal_pos = dungeon_generator.place_exit_stairs()
+		
+		# Get the portal/stairs node and configure it for this world
+		var portal = dungeon_generator.get_exit_stairs()
+		if portal and portal.has_method("set_world_id"):
+			portal.set_world_id(world_id)
+		
+		print("Level: Portal placed at ", portal_pos, " for world ", world_id)
 	else:
-		print("Level: Failed to place exit stairs - DungeonGenerator method not available")
+		print("Level: Failed to place portal - DungeonGenerator method not available")

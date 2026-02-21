@@ -37,6 +37,9 @@ var _rooms: Array = []
 ## Exit stairs instance
 var _exit_stairs: Node2D
 
+## Player spawn point (in the first room, away from walls)
+var _player_spawn_point: Vector2 = Vector2.ZERO
+
 ## Tile size (32x32 pixels)
 
 
@@ -108,6 +111,9 @@ func generate_dungeon(passed_seed: int = 0) -> void:
 	# Generate outer walls (reinforce boundary, though filled map covers it)
 	_generate_boundary_walls()
 	
+	# Calculate player spawn point (in first room, away from walls)
+	_calculate_spawn_point()
+	
 	print("DungeonGenerator: Generated ", _rooms.size(), " rooms")
 
 
@@ -129,6 +135,15 @@ func get_first_room_center() -> Vector2:
 	return Vector2(first_room.center.x * TILE_SIZE, first_room.center.y * TILE_SIZE)
 
 
+func get_room_center(room_index: int) -> Vector2:
+	"""Get the center position of a specific room by index"""
+	if room_index < 0 or room_index >= _rooms.size():
+		return Vector2(map_width * TILE_SIZE / 2, map_height * TILE_SIZE / 2)
+	
+	var room = _rooms[room_index]
+	return Vector2(room.center.x * TILE_SIZE, room.center.y * TILE_SIZE)
+
+
 func get_room_count() -> int:
 	"""Return the number of generated rooms"""
 	return _rooms.size()
@@ -148,6 +163,31 @@ func clear_dungeon() -> void:
 	if _exit_stairs and is_instance_valid(_exit_stairs):
 		_exit_stairs.queue_free()
 		_exit_stairs = null
+
+
+func apply_theme_settings(theme: Resource) -> void:
+	"""Apply world theme settings to the dungeon generator"""
+	if theme == null:
+		return
+	
+	# Check if theme has map settings (WorldTheme with map properties)
+	if theme.has("map_width") and theme.has("map_height"):
+		map_width = theme.map_width
+		map_height = theme.map_height
+	
+	if theme.has("min_room_size"):
+		min_room_size = theme.min_room_size
+	
+	if theme.has("max_room_size"):
+		max_room_size = theme.max_room_size
+	
+	if theme.has("target_room_count"):
+		target_room_count = theme.target_room_count
+	
+	print("DungeonGenerator: Applied theme settings - ",
+		  "map: ", map_width, "x", map_height,
+		  ", rooms: ", target_room_count,
+		  " (", min_room_size, "-", max_room_size, ")")
 
 
 # -------------------------------------------------------------------------
@@ -319,6 +359,73 @@ func _are_rooms_connected(pos1: Vector2i, pos2: Vector2i) -> bool:
 func get_exit_stairs() -> Node2D:
 	"""Get the current exit stairs instance"""
 	return _exit_stairs
+
+
+func get_player_spawn_point() -> Vector2:
+	"""Get the player spawn point (always returns valid floor position)"""
+	if _player_spawn_point == Vector2.ZERO:
+		# Fallback to first room center if spawn not calculated
+		return get_first_room_center()
+	return _player_spawn_point
+
+
+func _calculate_spawn_point() -> void:
+	"""Calculate spawn point in first room, away from walls"""
+	if _rooms.is_empty():
+		_player_spawn_point = Vector2(map_width * TILE_SIZE / 2, map_height * TILE_SIZE / 2)
+		return
+	
+	var first_room = _rooms[0]
+	var room = first_room
+	
+	# Find a position in the room that's at least 1 tile away from walls
+	# Room has padding of 1 tile, so we check from position+1 to position+size-2
+	var min_x = room.position.x + 1
+	var max_x = room.position.x + room.size.x - 2
+	var min_y = room.position.y + 1
+	var max_y = room.position.y + room.size.y - 2
+	
+	# If room is too small, use center
+	if max_x <= min_x or max_y <= min_y:
+		_player_spawn_point = Vector2(room.center.x * TILE_SIZE, room.center.y * TILE_SIZE)
+		print("DungeonGenerator: Spawn point (room too small, using center): ", _player_spawn_point)
+		return
+	
+	# Find a random position that's definitely floor (not wall)
+	# Try multiple positions to find a good one
+	var best_pos = Vector2.ZERO
+	var attempts = 0
+	
+	while attempts < 20:
+		var tile_x = _rng.randi_range(min_x, max_x)
+		var tile_y = _rng.randi_range(min_y, max_y)
+		
+		# Check if this is a floor tile
+		if _is_floor_tile(tile_x, tile_y):
+			best_pos = Vector2(tile_x * TILE_SIZE + TILE_SIZE / 2, tile_y * TILE_SIZE + TILE_SIZE / 2)
+			break
+		attempts += 1
+	
+	# If no good position found, use center
+	if best_pos == Vector2.ZERO:
+		best_pos = Vector2(room.center.x * TILE_SIZE, room.center.y * TILE_SIZE)
+	
+	_player_spawn_point = best_pos
+	print("DungeonGenerator: Player spawn point: ", _player_spawn_point)
+
+
+func _is_floor_tile(x: int, y: int) -> bool:
+	"""Check if a tile at position is floor (not wall)"""
+	if _tile_map == null:
+		return true # Assume floor if no tilemap
+	
+	var tile_data = _tile_map.get_cell_tile_data(0, Vector2i(x, y))
+	if tile_data == null:
+		return false
+	
+	# Check the tile atlas coordinates - floor is at (1, 0), wall is at (0, 0)
+	var tile_pos = _tile_map.get_cell_atlas_coords(0, Vector2i(x, y))
+	return tile_pos == Vector2i(1, 0) # Floor tile
 
 
 # -------------------------------------------------------------------------

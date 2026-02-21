@@ -48,6 +48,9 @@ var enemies_killed: int = 0
 ## Exit stairs reference
 var _exit_stairs: Node2D
 
+## Maximum world count (for win condition)
+const MAX_WORLDS: int = 6
+
 ## Win screen instance
 var _win_screen: Control
 
@@ -268,10 +271,59 @@ func reset_enemy_kills() -> void:
 
 func register_exit_stairs(stairs: Node2D) -> void:
 	"""Register exit stairs reference"""
+	# Disconnect old portal if exists
+	if _exit_stairs and is_instance_valid(_exit_stairs):
+		if _exit_stairs.has_signal("stairs_entered"):
+			_exit_stairs.stairs_entered.disconnect(_on_stairs_entered)
+		if _exit_stairs.has_signal("portal_entered"):
+			_exit_stairs.portal_entered.disconnect(_on_portal_entered)
+	
 	_exit_stairs = stairs
+	
 	if stairs and stairs.has_signal("stairs_entered"):
 		stairs.stairs_entered.connect(_on_stairs_entered)
-	print("GameManager: Exit stairs registered")
+	# Also connect to portal_entered signal
+	if stairs and stairs.has_signal("portal_entered"):
+		stairs.portal_entered.connect(_on_portal_entered)
+	print("GameManager: Exit stairs registered for world ", stairs.world_id if "world_id" in stairs else 0)
+
+
+func _on_portal_entered() -> void:
+	"""Handle player entering a portal - advance to next level"""
+	if not game_active or game_won:
+		return
+	
+	# Check if this is the final world
+	if world_id >= MAX_WORLDS - 1:
+		# Final world - trigger win!
+		print("GameManager: Player completed final world! Triggering win...")
+		_on_stairs_entered()
+		return
+	
+	# Advance to next world
+	print("GameManager: Player entered portal! Advancing to next world...")
+	_advance_to_next_world()
+
+
+func _advance_to_next_world() -> void:
+	"""Advance to the next world without player death"""
+	# Increment world ID
+	world_id += 1
+	print("GameManager: Advancing to World ", world_id)
+	
+	# Calculate new seed for world generation
+	var new_seed = _calculate_world_seed()
+	
+	# Regenerate world
+	_regenerate_world(new_seed)
+	
+	# Mutate player
+	_mutate_player()
+	
+	# Apply world theme
+	_apply_world_theme()
+	
+	print("GameManager: Advanced to world ", world_id)
 
 
 func _on_stairs_entered() -> void:
