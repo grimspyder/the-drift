@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Drift — Tile Selector</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #16213e;
+      padding: 16px 24px;
+      border-bottom: 2px solid #0f3460;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      color: #e94560;
+    }
+
+    header span {
+      color: #888;
+      font-size: 0.85rem;
+    }
+
+    .container {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      height: calc(100vh - 70px);
+    }
+
+    /* Left panel - sprite sheet */
+    .sprite-panel {
+      flex: 2;
+      background: #16213e;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sprite-panel h2 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: #e94560;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .controls-row label {
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+
+    select,
+    input[type="number"] {
+      background: #0f3460;
+      color: #e0e0e0;
+      border: 1px solid #333;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #e94560;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #c73550;
+    }
+
+    .btn-wall {
+      background: #4a2c6e;
+      color: white;
+    }
+
+    .btn-wall:hover {
+      background: #5a3580;
+    }
+
+    .btn-wall.active {
+      background: #7c3aed;
+      box-shadow: 0 0 12px rgba(124, 58, 237, 0.5);
+    }
+
+    .btn-floor {
+      background: #1e5a3a;
+      color: white;
+    }
+
+    .btn-floor:hover {
+      background: #267a4e;
+    }
+
+    .btn-floor.active {
+      background: #10b981;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+    }
+
+    .btn-export {
+      background: #0f3460;
+      color: #4fc3f7;
+      border: 1px solid #4fc3f7;
+    }
+
+    .btn-export:hover {
+      background: #4fc3f7;
+      color: #1a1a2e;
+    }
+
+    .sprite-viewport {
+      flex: 1;
+      overflow: auto;
+      background: #111;
+      border-radius: 8px;
+      position: relative;
+      cursor: crosshair;
+    }
+
+    .sprite-viewport canvas {
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    .selection-overlay {
+      position: absolute;
+      border: 2px dashed;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .selection-wall {
+      border-color: #7c3aed;
+      background: rgba(124, 58, 237, 0.15);
+    }
+
+    .selection-floor {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.15);
+    }
+
+    .selection-label {
+      position: absolute;
+      top: -22px;
+      left: 0;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .selection-wall .selection-label {
+      background: #7c3aed;
+      color: white;
+    }
+
+    .selection-floor .selection-label {
+      background: #10b981;
+      color: white;
+    }
+
+    /* Right panel - preview & export */
+    .preview-panel {
+      flex: 1;
+      background: #16213e;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .preview-panel h2 {
+      font-size: 1rem;
+      color: #e94560;
+    }
+
+    .tile-preview {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    .tile-card {
+      text-align: center;
+    }
+
+    .tile-card h3 {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 8px;
+    }
+
+    .tile-card canvas {
+      border: 2px solid #333;
+      border-radius: 4px;
+      image-rendering: pixelated;
+      background: repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50% / 16px 16px;
+    }
+
+    .map-preview {
+      flex: 1;
+      overflow: auto;
+      background: #111;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .map-preview canvas {
+      image-rendering: pixelated;
+    }
+
+    .world-selector {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .world-btn {
+      padding: 6px 12px;
+      border: 1px solid #333;
+      background: #0f3460;
+      color: #e0e0e0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .world-btn:hover {
+      background: #1a4a80;
+    }
+
+    .world-btn.active {
+      background: #e94560;
+      border-color: #e94560;
+      color: white;
+    }
+
+    .status {
+      font-size: 0.8rem;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: #0a0a1a;
+      color: #4fc3f7;
+      min-height: 32px;
+    }
+
+    .drop-zone {
+      border: 2px dashed #333;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .drop-zone:hover {
+      border-color: #e94560;
+      color: #e94560;
+    }
+
+    .grid-size-input {
+      width: 60px;
+    }
+
+    .nudge-step-input {
+      width: 50px;
+    }
+
+    .pos-readout {
+      font-size: 0.75rem;
+      color: #4fc3f7;
+      background: #0a0a1a;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: 'Consolas', monospace;
+      min-width: 200px;
+    }
+
+    .keyboard-hint {
+      font-size: 0.7rem;
+      color: #666;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>🎮 The Drift — Tile Selector</h1>
+    <span>Select wall & floor tiles from your sprite sheets, then export for the game</span>
+  </header>
+
+  <div class="container">
+    <!-- Left: Sprite Sheet Viewer -->
+    <div class="sprite-panel">
+      <h2>Sprite Sheet</h2>
+
+      <div class="controls-row">
+        <div class="world-selector" id="worldSelector">
+          <button class="world-btn active" data-world="0">World 0</button>
+          <button class="world-btn" data-world="1">World 1</button>
+          <button class="world-btn" data-world="2">World 2</button>
+          <button class="world-btn" data-world="3">World 3</button>
+          <button class="world-btn" data-world="4">World 4</button>
+          <button class="world-btn" data-world="5">World 5</button>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <button class="btn btn-wall" id="btnSelectWall" onclick="setMode('wall')">🧱 Select Wall</button>
+        <button class="btn btn-floor" id="btnSelectFloor" onclick="setMode('floor')">🟫 Select Floor</button>
+        <label>Grid: <input type="number" id="gridSize" class="grid-size-input" value="32" min="8" max="256" step="8"
+            onchange="updateGrid()"> px</label>
+        <label>Nudge: <input type="number" id="nudgeStep" class="nudge-step-input" value="1" min="1" max="32" step="1">
+          px</label>
+        <label><input type="checkbox" id="showGrid" checked onchange="redraw()"> Show Grid</label>
+      </div>
+      <div class="controls-row">
+        <span class="pos-readout" id="posReadout">No selection — click a tile after choosing Wall or Floor</span>
+      </div>
+      <div class="keyboard-hint">⌨️ Arrow keys = nudge position &nbsp;|&nbsp; Shift+Arrow = resize &nbsp;|&nbsp; +/- =
+        zoom</div>
+
+      <div class="sprite-viewport" id="viewport">
+        <canvas id="spriteCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Right: Preview & Export -->
+    <div class="preview-panel">
+      <h2>Selected Tiles</h2>
+
+      <div class="tile-preview">
+        <div class="tile-card">
+          <h3>🧱 WALL (collides)</h3>
+          <canvas id="wallPreview" width="128" height="128"></canvas>
+        </div>
+        <div class="tile-card">
+          <h3>🟫 FLOOR (walkable)</h3>
+          <canvas id="floorPreview" width="128" height="128"></canvas>
+        </div>
+      </div>
+
+      <h2>Map Preview (5×5)</h2>
+      <div class="map-preview">
+        <canvas id="mapPreview" width="320" height="320"></canvas>
+      </div>
+
+      <div class="controls-row">
+        <button class="btn btn-export" onclick="exportAtlas()">💾 Export Atlas for World</button>
+        <button class="btn btn-export" onclick="exportAllAtlases()">📦 Export All Worlds</button>
+      </div>
+
+      <div class="status" id="status">Load a sprite sheet to begin. Click on a tile to select it as wall or floor.</div>
+    </div>
+  </div>
+
+  <script>
+    const WORLDS = ['world_0', 'world_1', 'world_2', 'world_3', 'world_4', 'world_5'];
+    const WORLD_NAMES = ['Prime World', 'Verdant Realm', 'Arid Wastes', 'Crystalline Void', 'Ashen Realm', 'Shadow Realm'];
+
+    let currentWorld = 0;
+    let currentMode = null; // 'wall' or 'floor'
+    let gridSize = 32;
+    let spriteImage = null;
+    let zoom = 1;
+
+    // Store selections per world: { wall: {x, y, w, h}, floor: {x, y, w, h} }
+    let worldSelections = {};
+    WORLDS.forEach((w, i) => { worldSelections[i] = { wall: null, floor: null }; });
+
+    const spriteCanvas = document.getElementById('spriteCanvas');
+    const spriteCtx = spriteCanvas.getContext('2d');
+    const wallPreviewCanvas = document.getElementById('wallPreview');
+    const wallPreviewCtx = wallPreviewCanvas.getContext('2d');
+    const floorPreviewCanvas = document.getElementById('floorPreview');
+    const floorPreviewCtx = floorPreviewCanvas.getContext('2d');
+    const mapPreviewCanvas = document.getElementById('mapPreview');
+    const mapPreviewCtx = mapPreviewCanvas.getContext('2d');
+
+    // Load sprite sheets from the assets folder
+    function loadWorld(worldIndex) {
+      currentWorld = worldIndex;
+
+      // Update buttons
+      document.querySelectorAll('.world-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === worldIndex);
+      });
+
+      const img = new Image();
+      img.onload = () => {
+        spriteImage = img;
+        // Auto-fit zoom
+        const viewport = document.getElementById('viewport');
+        zoom = Math.min(
+          (viewport.clientWidth - 20) / img.width,
+          (viewport.clientHeight - 20) / img.height,
+          2
+        );
+        zoom = Math.max(zoom, 0.5);
+
+        spriteCanvas.width = img.width * zoom;
+        spriteCanvas.height = img.height * zoom;
+        redraw();
+        updatePreviews();
+        setStatus(`Loaded ${WORLD_NAMES[worldIndex]} (${img.width}×${img.height}). Select wall and floor tiles.`);
+      };
+      img.onerror = () => {
+        setStatus(`❌ Could not load /assets/tilesets/${WORLDS[worldIndex]}.png — make sure the server is running.`);
+      };
+      img.src = `/assets/tilesets/${WORLDS[worldIndex]}.png`;
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('btnSelectWall').classList.toggle('active', mode === 'wall');
+      document.getElementById('btnSelectFloor').classList.toggle('active', mode === 'floor');
+      setStatus(`Click on the sprite sheet to select a ${mode} tile.`);
+    }
+
+    function updateGrid() {
+      gridSize = parseInt(document.getElementById('gridSize').value) || 32;
+      redraw();
+    }
+
+    function redraw() {
+      if (!spriteImage) return;
+
+      spriteCtx.imageSmoothingEnabled = false;
+      spriteCtx.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
+
+      // Draw checkerboard background
+      const checkSize = 16;
+      for (let y = 0; y < spriteCanvas.height; y += checkSize) {
+        for (let x = 0; x < spriteCanvas.width; x += checkSize) {
+          spriteCtx.fillStyle = ((x + y) / checkSize) % 2 === 0 ? '#2a2a2a' : '#222';
+          spriteCtx.fillRect(x, y, checkSize, checkSize);
+        }
+      }
+
+      // Draw sprite sheet
+      spriteCtx.drawImage(spriteImage, 0, 0, spriteCanvas.width, spriteCanvas.height);
+
+      // Draw grid
+      if (document.getElementById('showGrid').checked) {
+        spriteCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+        spriteCtx.lineWidth = 1;
+        const scaledGrid = gridSize * zoom;
+        for (let x = 0; x < spriteCanvas.width; x += scaledGrid) {
+          spriteCtx.beginPath();
+          spriteCtx.moveTo(x, 0);
+          spriteCtx.lineTo(x, spriteCanvas.height);
+          spriteCtx.stroke();
+        }
+        for (let y = 0; y < spriteCanvas.height; y += scaledGrid) {
+          spriteCtx.beginPath();
+          spriteCtx.moveTo(0, y);
+          spriteCtx.lineTo(spriteCanvas.width, y);
+          spriteCtx.stroke();
+        }
+      }
+
+      // Draw selections
+      const sel = worldSelections[currentWorld];
+      if (sel.wall) drawSelection(sel.wall, '#7c3aed', 'WALL');
+      if (sel.floor) drawSelection(sel.floor, '#10b981', 'FLOOR');
+    }
+
+    function drawSelection(rect, color, label) {
+      const x = rect.x * zoom;
+      const y = rect.y * zoom;
+      const w = rect.w * zoom;
+      const h = rect.h * zoom;
+
+      spriteCtx.strokeStyle = color;
+      spriteCtx.lineWidth = 3;
+      spriteCtx.strokeRect(x, y, w, h);
+
+      spriteCtx.fillStyle = color + '30';
+      spriteCtx.fillRect(x, y, w, h);
+
+      // Label
+      spriteCtx.fillStyle = color;
+      spriteCtx.font = 'bold 14px sans-serif';
+      spriteCtx.fillText(label, x + 4, y - 6);
+    }
+
+    // Handle clicks on sprite canvas
+    spriteCanvas.addEventListener('mousedown', (e) => {
+      if (!currentMode || !spriteImage) return;
+
+      const rect = spriteCanvas.getBoundingClientRect();
+      const scrollX = document.getElementById('viewport').scrollLeft;
+      const scrollY = document.getElementById('viewport').scrollTop;
+
+      // Get pixel coordinates in the original image
+      const px = (e.clientX - rect.left + scrollX) / zoom;
+      const py = (e.clientY - rect.top + scrollY) / zoom;
+
+      // Snap to grid
+      const gx = Math.floor(px / gridSize) * gridSize;
+      const gy = Math.floor(py / gridSize) * gridSize;
+
+      // Clamp to image bounds
+      const tileW = Math.min(gridSize, spriteImage.width - gx);
+      const tileH = Math.min(gridSize, spriteImage.height - gy);
+
+      if (tileW <= 0 || tileH <= 0) return;
+
+      worldSelections[currentWorld][currentMode] = { x: gx, y: gy, w: tileW, h: tileH };
+
+      redraw();
+      updatePreviews();
+
+      const tileName = currentMode === 'wall' ? '🧱 Wall' : '🟫 Floor';
+      setStatus(`${tileName} selected at (${gx}, ${gy}) — ${tileW}×${tileH}px from ${WORLD_NAMES[currentWorld]}`);
+      updatePosReadout();
+    });
+
+    function updatePreviews() {
+      const sel = worldSelections[currentWorld];
+
+      // Wall preview
+      wallPreviewCtx.imageSmoothingEnabled = false;
+      wallPreviewCtx.clearRect(0, 0, 128, 128);
+      if (sel.wall && spriteImage) {
+        wallPreviewCtx.drawImage(spriteImage, sel.wall.x, sel.wall.y, sel.wall.w, sel.wall.h, 0, 0, 128, 128);
+      } else {
+        wallPreviewCtx.fillStyle = '#333';
+        wallPreviewCtx.fillRect(0, 0, 128, 128);
+        wallPreviewCtx.fillStyle = '#666';
+        wallPreviewCtx.font = '14px sans-serif';
+        wallPreviewCtx.textAlign = 'center';
+        wallPreviewCtx.fillText('No wall', 64, 68);
+      }
+
+      // Floor preview
+      floorPreviewCtx.imageSmoothingEnabled = false;
+      floorPreviewCtx.clearRect(0, 0, 128, 128);
+      if (sel.floor && spriteImage) {
+        floorPreviewCtx.drawImage(spriteImage, sel.floor.x, sel.floor.y, sel.floor.w, sel.floor.h, 0, 0, 128, 128);
+      } else {
+        floorPreviewCtx.fillStyle = '#333';
+        floorPreviewCtx.fillRect(0, 0, 128, 128);
+        floorPreviewCtx.fillStyle = '#666';
+        floorPreviewCtx.font = '14px sans-serif';
+        floorPreviewCtx.textAlign = 'center';
+        floorPreviewCtx.fillText('No floor', 64, 68);
+      }
+
+      // Map preview - simple room with wall border and floor interior
+      updateMapPreview();
+    }
+
+    function updateMapPreview() {
+      const sel = worldSelections[currentWorld];
+      mapPreviewCtx.imageSmoothingEnabled = false;
+      mapPreviewCtx.clearRect(0, 0, 320, 320);
+
+      const tileSize = 32;
+      const cols = 10;
+      const rows = 10;
+      mapPreviewCanvas.width = cols * tileSize;
+      mapPreviewCanvas.height = rows * tileSize;
+
+      // Simple room layout: walls on edges, floor in middle, with corridor
+      const layout = [
+        'WWWWWWWWWW',
+        'WFFFWFFFFW',
+        'WFFFWFFFFW',
+        'WFFFFFFF W',
+        'WWWFFWWWWW',
+        'WFFFFWFFFW',
+        'WFFFFWFFFW',
+        'WFFFFFFFFW',
+        'WFFFFFFFFW',
+        'WWWWWWWWWW',
+      ];
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const ch = layout[r][c];
+          const dx = c * tileSize;
+          const dy = r * tileSize;
+
+          if (ch === 'W' && sel.wall && spriteImage) {
+            mapPreviewCtx.drawImage(spriteImage, sel.wall.x, sel.wall.y, sel.wall.w, sel.wall.h, dx, dy, tileSize, tileSize);
+          } else if (ch === 'F' && sel.floor && spriteImage) {
+            mapPreviewCtx.drawImage(spriteImage, sel.floor.x, sel.floor.y, sel.floor.w, sel.floor.h, dx, dy, tileSize, tileSize);
+          } else {
+            mapPreviewCtx.fillStyle = ch === 'W' ? '#222' : '#444';
+            mapPreviewCtx.fillRect(dx, dy, tileSize, tileSize);
+          }
+        }
+      }
+    }
+
+    function exportAtlas() {
+      const sel = worldSelections[currentWorld];
+      if (!sel.wall || !sel.floor || !spriteImage) {
+        setStatus('❌ Select both a wall and floor tile first!');
+        return;
+      }
+
+      // Create 64x32 atlas: wall at (0,0), floor at (32,0)
+      const atlas = document.createElement('canvas');
+      atlas.width = 64;
+      atlas.height = 32;
+      const ctx = atlas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+
+      // Draw wall tile
+      ctx.drawImage(spriteImage, sel.wall.x, sel.wall.y, sel.wall.w, sel.wall.h, 0, 0, 32, 32);
+      // Draw floor tile
+      ctx.drawImage(spriteImage, sel.floor.x, sel.floor.y, sel.floor.w, sel.floor.h, 32, 0, 32, 32);
+
+      // Fill transparent pixels
+      const imageData = ctx.getImageData(0, 0, 64, 32);
+      const data = imageData.data;
+      // Wall fill: dark grey, Floor fill: medium grey
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 128) { // Transparent
+          const px = (i / 4) % 64;
+          if (px < 32) { // Wall half
+            data[i] = 30; data[i + 1] = 30; data[i + 2] = 40; data[i + 3] = 255;
+          } else { // Floor half
+            data[i] = 90; data[i + 1] = 85; data[i + 2] = 77; data[i + 3] = 255;
+          }
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+
+      // Save directly to the tilesets folder via local server
+      atlas.toBlob((blob) => {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64 = reader.result.split(',')[1];
+          const filename = `${WORLDS[currentWorld]}_atlas.png`;
+          try {
+            const resp = await fetch('/save-atlas', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filename, data: base64 }),
+            });
+            const result = await resp.json();
+            if (result.success) {
+              setStatus(`✅ Saved ${filename} (${result.size} bytes) → ${result.path}`);
+            } else {
+              setStatus(`❌ Save failed: ${result.error}`);
+            }
+          } catch (err) {
+            setStatus(`❌ Server error: ${err.message}. Is the server running? (node server.js)`);
+          }
+        };
+        reader.readAsDataURL(blob);
+      }, 'image/png');
+    }
+
+    function exportAllAtlases() {
+      let exported = 0;
+      let missing = [];
+
+      for (let i = 0; i < 6; i++) {
+        const sel = worldSelections[i];
+        if (!sel.wall || !sel.floor) {
+          missing.push(`World ${i}`);
+          continue;
+        }
+        exported++;
+      }
+
+      if (missing.length > 0) {
+        setStatus(`⚠️ Missing selections for: ${missing.join(', ')}. Select wall+floor for each world first.`);
+        return;
+      }
+
+      // Export current world's atlas (user needs to do each one)
+      setStatus(`Export each world individually using "Export Atlas for World" after selecting tiles.`);
+    }
+
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    // World button clicks
+    document.querySelectorAll('.world-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        loadWorld(parseInt(btn.dataset.world));
+      });
+    });
+
+    // Keyboard controls for nudging and resizing selections
+    document.addEventListener('keydown', (e) => {
+      if (!currentMode || !spriteImage) return;
+      const sel = worldSelections[currentWorld][currentMode];
+      if (!sel) return;
+
+      const step = parseInt(document.getElementById('nudgeStep').value) || 1;
+      let handled = true;
+
+      if (e.shiftKey) {
+        // Shift + Arrow = resize selection
+        switch (e.key) {
+          case 'ArrowRight': sel.w = Math.min(sel.w + step, spriteImage.width - sel.x); break;
+          case 'ArrowLeft': sel.w = Math.max(step, sel.w - step); break;
+          case 'ArrowDown': sel.h = Math.min(sel.h + step, spriteImage.height - sel.y); break;
+          case 'ArrowUp': sel.h = Math.max(step, sel.h - step); break;
+          default: handled = false;
+        }
+      } else {
+        // Arrow = nudge position
+        switch (e.key) {
+          case 'ArrowRight': sel.x = Math.min(sel.x + step, spriteImage.width - sel.w); break;
+          case 'ArrowLeft': sel.x = Math.max(0, sel.x - step); break;
+          case 'ArrowDown': sel.y = Math.min(sel.y + step, spriteImage.height - sel.h); break;
+          case 'ArrowUp': sel.y = Math.max(0, sel.y - step); break;
+          default: handled = false;
+        }
+      }
+
+      if (handled) {
+        e.preventDefault();
+        redraw();
+        updatePreviews();
+        updatePosReadout();
+      }
+    });
+
+    function updatePosReadout() {
+      if (!currentMode) {
+        document.getElementById('posReadout').textContent = 'No selection mode — click Wall or Floor first';
+        return;
+      }
+      const sel = worldSelections[currentWorld][currentMode];
+      if (!sel) {
+        document.getElementById('posReadout').textContent = `${currentMode.toUpperCase()}: not set — click on sprite sheet`;
+        return;
+      }
+      const label = currentMode === 'wall' ? '🧱 WALL' : '🟫 FLOOR';
+      document.getElementById('posReadout').textContent =
+        `${label}  x:${sel.x}  y:${sel.y}  w:${sel.w}  h:${sel.h}  |  Arrow=move  Shift+Arrow=resize`;
+    }
+
+    // Initial load
+    loadWorld(0);
+  </script>
+</body>
+
+</html>

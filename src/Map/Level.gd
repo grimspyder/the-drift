@@ -134,81 +134,96 @@ func _apply_theme_to_tilemap() -> void:
 		push_error("Level: Cannot apply theme - tile_map or _current_theme is null!")
 		return
 
-	var png_path = "res://assets/tilesets/world_%d.png" % _current_theme.theme_id
-	var custom_tileset = _build_tileset_from_texture(png_path)
+	# First try pre-made atlas (exported from Tile Selector tool)
+	var atlas_path = "res://assets/tilesets/world_%d_atlas.png" % _current_theme.theme_id
+	var custom_tileset = _build_tileset_from_atlas(atlas_path)
+	
+	if not custom_tileset:
+		# Fallback: try the full sprite sheet with region extraction
+		var sheet_path = "res://assets/tilesets/world_%d.png" % _current_theme.theme_id
+		custom_tileset = _build_tileset_from_spritesheet(sheet_path)
+	
 	if custom_tileset:
 		tile_map.tile_set = custom_tileset
 		tile_map.clear()
-		# Custom tilesets have their own colors — don't modulate
 		tile_map.modulate = Color.WHITE
-		print("Level: Applied TileSet from: ", png_path)
+		print("Level: Applied custom TileSet for world ", _current_theme.theme_id)
 	else:
-		push_error("Level: Failed to build tileset from: " + png_path)
-		# Fallback: use modulation for basic tiles
+		push_error("Level: Failed to load any tileset for world " + str(_current_theme.theme_id))
 		tile_map.modulate = _current_theme.floor_color
 
 
-func _build_tileset_from_texture(texture_path: String) -> TileSet:
-	# Load texture directly from filesystem (bypasses Godot import system)
+func _build_tileset_from_atlas(atlas_path: String) -> TileSet:
+	"""Build a TileSet from a pre-made 64x32 atlas PNG (wall at 0,0 | floor at 32,0).
+	These atlases are exported by the Tile Selector tool."""
+	var abs_path = ProjectSettings.globalize_path(atlas_path)
+	var image = Image.load_from_file(abs_path)
+	if not image:
+		print("Level: No atlas found at ", abs_path, " — will try sprite sheet")
+		return null
+	
+	image.convert(Image.FORMAT_RGBA8)
+	print("Level: Loaded atlas ", image.get_width(), "x", image.get_height(), " from ", abs_path)
+	
+	var texture = ImageTexture.create_from_image(image)
+	if not texture:
+		return null
+	
+	return _create_tileset_from_texture(texture)
+
+
+func _build_tileset_from_spritesheet(texture_path: String) -> TileSet:
+	"""Build a TileSet by extracting wall/floor tiles from a full sprite sheet."""
 	var abs_path = ProjectSettings.globalize_path(texture_path)
 	var image = Image.load_from_file(abs_path)
 	if not image:
 		push_error("Level: Could not load image from: " + abs_path)
 		return null
 	
-	var img_w = image.get_width()
-	var img_h = image.get_height()
-	print("Level: Loaded sprite sheet ", img_w, "x", img_h, " format=", image.get_format(), " from ", abs_path)
-	
-	# Convert to RGBA8 so all image operations use the same format
 	image.convert(Image.FORMAT_RGBA8)
+	print("Level: Loaded sprite sheet ", image.get_width(), "x", image.get_height(), " from ", abs_path)
 	
-	# Each sprite sheet has a unique layout — define wall & floor regions per world
-	# wall_rect = the dark/solid wall tile region in the sprite sheet
-	# floor_rect = the walkable ground tile region in the sprite sheet
 	var tile_regions = _get_tile_regions_for_theme()
 	var wall_rect: Rect2i = tile_regions.wall
 	var floor_rect: Rect2i = tile_regions.floor
+	var wall_fill: Color = tile_regions.get("wall_fill", Color(0.15, 0.15, 0.2))
+	var floor_fill: Color = tile_regions.get("floor_fill", Color(0.35, 0.33, 0.3))
 	
-	print("Level: Extracting wall from ", wall_rect, ", floor from ", floor_rect)
-	
-	# Extract and resize to 32x32
 	var wall_img = image.get_region(wall_rect)
-	wall_img.resize(32, 32, Image.INTERPOLATE_NEAREST)
-	
 	var floor_img = image.get_region(floor_rect)
+	_fill_transparent_pixels(wall_img, wall_fill)
+	_fill_transparent_pixels(floor_img, floor_fill)
+	wall_img.resize(32, 32, Image.INTERPOLATE_NEAREST)
 	floor_img.resize(32, 32, Image.INTERPOLATE_NEAREST)
 	
-	# Compose a 64x32 atlas image: wall at (0,0), floor at (1,0)
 	var atlas_img = Image.create(64, 32, false, Image.FORMAT_RGBA8)
 	atlas_img.blit_rect(wall_img, Rect2i(0, 0, 32, 32), Vector2i(0, 0))
 	atlas_img.blit_rect(floor_img, Rect2i(0, 0, 32, 32), Vector2i(32, 0))
 	
 	var atlas_texture = ImageTexture.create_from_image(atlas_img)
 	if not atlas_texture:
-		push_error("Level: Could not create atlas texture")
 		return null
+	return _create_tileset_from_texture(atlas_texture)
 
-	# Create TileSet with physics layer
+
+func _create_tileset_from_texture(texture: Texture2D) -> TileSet:
+	"""Create a TileSet from a 64x32 atlas texture: wall=(0,0), floor=(1,0)."""
 	var tileset = TileSet.new()
 	tileset.tile_size = Vector2i(32, 32)
 	tileset.add_physics_layer()
 	tileset.set_physics_layer_collision_layer(0, 2)
 	tileset.set_physics_layer_collision_mask(0, 0)
 
-	# Create atlas source from composed 64x32 atlas
 	var source = TileSetAtlasSource.new()
-	source.texture = atlas_texture
+	source.texture = texture
 	source.texture_region_size = Vector2i(32, 32)
 
-	# (0,0) = wall, (1,0) = floor — matches DungeonGenerator set_cell calls
-	source.create_tile(Vector2i(0, 0))
-	source.create_tile(Vector2i(1, 0))
+	source.create_tile(Vector2i(0, 0)) # Wall
+	source.create_tile(Vector2i(1, 0)) # Floor
 
-	# Add source to tileset first
 	var source_id = tileset.add_source(source)
 
-	# Set collision on wall tile
+	# Wall collision
 	var wall_data: TileData = source.get_tile_data(Vector2i(0, 0), 0)
 	wall_data.set_collision_polygons_count(0, 1)
 	wall_data.set_collision_polygon_points(0, 0, PackedVector2Array([
@@ -221,49 +236,71 @@ func _build_tileset_from_texture(texture_path: String) -> TileSet:
 
 
 func _get_tile_regions_for_theme() -> Dictionary:
-	"""Return pixel rectangles for wall and floor tiles based on the current theme.
-	Each sprite sheet (1024x1024) has a unique hand-drawn layout, so we specify
-	the exact pixel region for the wall tile (solid obstacle) and floor tile
-	(walkable ground) for each world."""
-	
 	var theme_id = _current_theme.theme_id if _current_theme else 0
-	
 	match theme_id:
-		0: # Prime World — dark stone brick walls (top-right), cracked stone floor (mid-right)
+		0:
 			return {
-				"wall": Rect2i(615, 0, 200, 130), # Dark brick wall horizontal
-				"floor": Rect2i(615, 165, 200, 165), # Cracked stone floor variations
+				"wall": Rect2i(615, 0, 200, 130),
+				"floor": Rect2i(615, 165, 200, 165),
+				"wall_fill": Color(0.12, 0.12, 0.15),
+				"floor_fill": Color(0.35, 0.33, 0.30),
 			}
-		1: # Verdant Realm — vine-covered walls (top-right), mossy ground (top-left)
+		1:
 			return {
-				"wall": Rect2i(512, 0, 256, 256), # Vine-covered stone wall
-				"floor": Rect2i(0, 0, 256, 256), # Mossy stone ground
+				"wall": Rect2i(512, 0, 256, 256),
+				"floor": Rect2i(0, 0, 256, 256),
+				"wall_fill": Color(0.18, 0.25, 0.12),
+				"floor_fill": Color(0.30, 0.45, 0.20),
 			}
-		2: # Arid Wastes — adobe walls (top-left structure), sandy floor (row 1 small tiles)
+		2:
 			return {
-				"wall": Rect2i(0, 0, 400, 300), # Adobe wall structure
-				"floor": Rect2i(0, 340, 170, 170), # Sandy floor with footprints
+				"wall": Rect2i(0, 0, 400, 300),
+				"floor": Rect2i(0, 340, 170, 170),
+				"wall_fill": Color(0.45, 0.32, 0.18),
+				"floor_fill": Color(0.65, 0.55, 0.35),
 			}
-		3: # Crystalline Void — purple crystal walls (row 0), dark crystal floor (row 3)
+		3:
 			return {
-				"wall": Rect2i(0, 0, 205, 300), # Purple crystal wall
-				"floor": Rect2i(0, 620, 205, 200), # Dark stone floor tile
+				"wall": Rect2i(0, 0, 205, 300),
+				"floor": Rect2i(0, 620, 205, 200),
+				"wall_fill": Color(0.15, 0.05, 0.25),
+				"floor_fill": Color(0.08, 0.06, 0.15),
 			}
-		4: # Ashen Realm — charred beam walls (row 0 right), ash floor (row 1 left)
+		4:
 			return {
-				"wall": Rect2i(615, 0, 200, 175), # Charred wooden beam wall
-				"floor": Rect2i(0, 195, 205, 195), # Ash-covered floor with ember cracks
+				"wall": Rect2i(615, 0, 200, 175),
+				"floor": Rect2i(0, 195, 205, 195),
+				"wall_fill": Color(0.12, 0.08, 0.05),
+				"floor_fill": Color(0.10, 0.06, 0.04),
 			}
-		5: # Shadow Realm — shadowy mist walls (left rectangles), void floor (row 2)
+		5:
 			return {
-				"wall": Rect2i(0, 170, 330, 170), # Shadowy mist wall tile
-				"floor": Rect2i(0, 340, 330, 170), # Dark void floor
+				"wall": Rect2i(0, 170, 330, 170),
+				"floor": Rect2i(0, 340, 330, 170),
+				"wall_fill": Color(0.12, 0.02, 0.18),
+				"floor_fill": Color(0.06, 0.01, 0.10),
 			}
-		_: # Fallback
+		_:
 			return {
 				"wall": Rect2i(0, 0, 200, 200),
 				"floor": Rect2i(200, 0, 200, 200),
+				"wall_fill": Color(0.15, 0.15, 0.15),
+				"floor_fill": Color(0.35, 0.35, 0.35),
 			}
+
+
+func _fill_transparent_pixels(img: Image, fill_color: Color) -> void:
+	"""Replace transparent pixels with a solid fill color so tiles render
+	correctly when repeated in the TileMap (no white gaps from PNG transparency)."""
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			var pixel = img.get_pixel(x, y)
+			if pixel.a < 0.5:
+				img.set_pixel(x, y, fill_color)
+			elif pixel.a < 1.0:
+				var blended = fill_color.lerp(pixel, pixel.a)
+				blended.a = 1.0
+				img.set_pixel(x, y, blended)
 
 
 func get_player_spawn_position() -> Vector2:
