@@ -46,7 +46,7 @@
 
     /* Left: Tile Palette */
     .palette-panel {
-      width: 240px;
+      width: 400px;
       background: #16213e;
       padding: 12px;
       overflow-y: auto;
@@ -391,9 +391,68 @@
   <div class="app">
     <!-- LEFT: Tile Palette -->
     <div class="palette-panel" id="palettePanel">
+      <h3>📤 Upload Map Image</h3>
+      <div style="margin-bottom:12px;padding:10px;background:#1a2a4a;border-radius:6px;border:1px solid #4fc3f7;">
+        <input type="file" id="mapImageUpload" accept="image/*"
+          style="width:100%;color:#ccc;font-size:0.8rem;margin-bottom:8px;" onchange="handleMapImageUpload(event)">
+        <div style="font-size:0.7rem;color:#888;margin-bottom:8px;">
+          Upload an image to trace. Dark areas = walls, light areas = floors.
+        </div>
+        <button id="traceBtn" onclick="traceFromImage()"
+          style="display:none;width:100%;padding:8px;background:#4caf50;color:#fff;border:none;border-radius:4px;font-size:0.8rem;cursor:pointer;margin-bottom:4px;">
+          🎯 Auto-Trace Image
+        </button>
+        <div style="display:flex;gap:4px;">
+          <label style="font-size:0.65rem;color:#aaa;flex:1;">Brightness threshold:</label>
+          <input type="range" id="traceThreshold" min="32" max="224" value="128" style="width:60px;margin:0;"
+            onchange="updateTracePreview()">
+          <span id="thresholdVal" style="font-size:0.65rem;color:#4fc3f7;width:24px;">128</span>
+        </div>
+      </div>
+
       <h3>🎨 Tileset Tiles</h3>
+
+      <!-- Tile Size Input - More visible -->
+      <div style="margin-bottom:12px;padding:8px;background:#1a2a4a;border-radius:6px;border:1px solid #4fc3f7;">
+        <div style="font-size:0.7rem;color:#4fc3f7;margin-bottom:6px;font-weight:bold;">⚙️ Tile Size (adjust if
+          misalignment)</div>
+        <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+          <input type="number" id="tileSize" value="32" min="8" max="128" step="8"
+            style="width:55px;background:#0f3460;color:#fff;border:1px solid #4fc3f7;padding:4px 6px;border-radius:4px;font-size:0.8rem;"
+            onchange="loadWorldAtlas()">
+          <span style="font-size:0.7rem;color:#888;">px</span>
+          <button onclick="document.getElementById('tileSize').value=16;loadWorldAtlas()"
+            style="padding:3px 6px;background:#333;color:#ccc;border:none;border-radius:3px;font-size:0.65rem;cursor:pointer;">16</button>
+          <button onclick="document.getElementById('tileSize').value=24;loadWorldAtlas()"
+            style="padding:3px 6px;background:#333;color:#ccc;border:none;border-radius:3px;font-size:0.65rem;cursor:pointer;">24</button>
+          <button onclick="document.getElementById('tileSize').value=32;loadWorldAtlas()"
+            style="padding:3px 6px;background:#333;color:#ccc;border:none;border-radius:3px;font-size:0.65rem;cursor:pointer;">32</button>
+          <button onclick="document.getElementById('tileSize').value=48;loadWorldAtlas()"
+            style="padding:3px 6px;background:#333;color:#ccc;border:none;border-radius:3px;font-size:0.65rem;cursor:pointer;">48</button>
+          <button onclick="document.getElementById('tileSize').value=64;loadWorldAtlas()"
+            style="padding:3px 6px;background:#333;color:#ccc;border:none;border-radius:3px;font-size:0.65rem;cursor:pointer;">64</button>
+        </div>
+      </div>
+
       <div class="atlas-grid" id="atlasGrid">
         <div style="color:#666;font-size:.75rem;grid-column:1/-1">Select a world to load tiles</div>
+      </div>
+
+      <!-- Manual Tile Selection -->
+      <div style="margin-top:8px;padding:8px;background:#0a0a1a;border-radius:6px;">
+        <div style="font-size:0.7rem;color:#888;margin-bottom:6px;">Manual Tile Select:</div>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <label style="font-size:0.7rem;color:#aaa;">Col:</label>
+          <input type="number" id="tileCol" value="0" min="0"
+            style="width:40px;background:#0f3460;color:#ccc;border:1px solid #333;padding:2px 4px;border-radius:3px;font-size:0.7rem;">
+          <label style="font-size:0.7rem;color:#aaa;">Row:</label>
+          <input type="number" id="tileRow" value="0" min="0"
+            style="width:40px;background:#0f3460;color:#ccc;border:1px solid #333;padding:2px 4px;border-radius:3px;font-size:0.7rem;">
+          <button onclick="applyManualTile()"
+            style="background:#e94560;color:#fff;border:none;padding:3px 8px;border-radius:3px;font-size:0.65rem;cursor:pointer;">
+            Apply
+          </button>
+        </div>
       </div>
 
       <h3>Tile Function</h3>
@@ -540,7 +599,7 @@
     // Atlas image data
     let atlasImage = null;  // HTMLImageElement
     let atlasCols = 0, atlasRows = 0;
-    const TILE_PX = 32;  // Pixels per tile in atlas
+    let TILE_PX = 32;  // Pixels per tile in atlas (will be set from input)
 
     const CELL = 28;  // Grid cell size on screen
     const canvas = document.getElementById('mapCanvas');
@@ -555,74 +614,347 @@
     };
     const FUNC_COLLISION = { solid: true, floor: false, hazard: false, interactive: false, light: true, decorative: false };
 
+    // Uploaded background image for tracing - store as global
+    window.uploadedImage = null;
+    let uploadedImageCanvas = null;
+
+    // Getter to ensure variable is accessible
+    Object.defineProperty(window, 'uploadedImage', {
+      get: function () { return window.uploadedImage; },
+      set: function (val) { window.uploadedImage = val; },
+      configurable: true
+    });
+
+    // ============================================================
+    // IMAGE UPLOAD & TRACE MODE
+    // ============================================================
+    window.handleMapImageUpload = function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+          // Store the uploaded image as global
+          window.uploadedImage = img;
+          console.log('Uploaded image stored:', img.width, 'x', img.height);
+
+          // Create an offscreen canvas to analyze the image
+          uploadedImageCanvas = document.createElement('canvas');
+          uploadedImageCanvas.width = img.width;
+          uploadedImageCanvas.height = img.height;
+          const uploadCtx = uploadedImageCanvas.getContext('2d');
+          uploadCtx.drawImage(img, 0, 0);
+
+          // Resize map to match image dimensions (or closest fit)
+          mapWidth = Math.min(img.width, 80);
+          mapHeight = Math.min(img.height, 50);
+
+          // Initialize map as all walls
+          initMapAsWalls();
+
+          // Resize canvas and enable trace mode
+          resizeCanvas();
+
+          // Show the trace button
+          document.getElementById('traceBtn').style.display = 'block';
+
+          setStatus(`📤 Image loaded: ${img.width}x${img.height}. Adjust threshold and click "Auto-Trace" or paint manually!`);
+
+          // Switch to paint tool
+          setTool('paint');
+
+          // Auto-trace the image
+          traceFromImage();
+
+          // Force render to show the image
+          render();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+
+    function initMapAsWalls() {
+      tiles = [];
+      for (let y = 0; y < mapHeight; y++) {
+        tiles[y] = [];
+        for (let x = 0; x < mapWidth; x++) {
+          // Default to solid walls
+          tiles[y][x] = { col: 0, row: 0, func: 'solid' };
+        }
+      }
+      playerStart = null;
+      exitPortal = null;
+      enemySpawns = [];
+      undoStack = []; redoStack = [];
+    }
+
+    // Trace mode: check if pixel is dark (wall) or light (floor)
+    function getPixelCollision(x, y) {
+      if (!uploadedImageCanvas) return true; // Default to solid
+
+      const threshold = parseInt(document.getElementById('traceThreshold').value) || 128;
+
+      // Scale map coordinates to image coordinates
+      const scaleX = uploadedImageCanvas.width / mapWidth;
+      const scaleY = uploadedImageCanvas.height / mapHeight;
+      const imgX = Math.floor(x * scaleX);
+      const imgY = Math.floor(y * scaleY);
+
+      // Get pixel data
+      const pixel = uploadedImageCanvas.getContext('2d').getImageData(
+        Math.min(imgX, uploadedImageCanvas.width - 1),
+        Math.min(imgY, uploadedImageCanvas.height - 1),
+        1, 1
+      ).data;
+
+      // Simple heuristic: bright pixels = walkable, dark = wall
+      const brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
+
+      // Threshold: pixels brighter than threshold are walkable floors
+      return brightness < threshold; // true = solid, false = floor
+    }
+
+    // Auto-trace the uploaded image to create the map
+    window.traceFromImage = function () {
+      if (!uploadedImageCanvas) return;
+
+      const threshold = parseInt(document.getElementById('traceThreshold').value) || 128;
+      document.getElementById('thresholdVal').textContent = threshold;
+
+      saveState();
+
+      // Trace each tile
+      for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+          const isSolid = getPixelCollision(x, y);
+          if (isSolid) {
+            tiles[y][x] = { col: 0, row: 0, func: 'solid' };
+          } else {
+            tiles[y][x] = { col: 1, row: 0, func: 'floor' };
+          }
+        }
+      }
+
+      render();
+      setStatus(`✅ Traced map with threshold ${threshold}. Adjust and re-trace if needed!`);
+    };
+
+    // Update preview when threshold changes
+    window.updateTracePreview = function () {
+      const threshold = parseInt(document.getElementById('traceThreshold').value) || 128;
+      document.getElementById('thresholdVal').textContent = threshold;
+
+      // Auto-trace if image is loaded
+      if (uploadedImageCanvas) {
+        traceFromImage();
+      }
+    };
+
     // ============================================================
     // ATLAS LOADING
     // ============================================================
     async function loadWorldAtlas() {
+      // Get tile size from input
+      TILE_PX = parseInt(document.getElementById('tileSize').value) || 32;
+
       const worldId = document.getElementById('worldId').value;
       const img = new Image();
       img.crossOrigin = 'anonymous';
 
-      // Try world atlas first, then basic_tiles
+      // Try world PNG first (full tileset), then atlas, then basic_tiles
       const urls = [
+        `/assets/tilesets/world_${worldId}.png`,
         `/assets/tilesets/world_${worldId}_atlas.png`,
         `/assets/tilesets/basic_tiles.png`
       ];
 
+      let loadedUrl = null;
       for (const url of urls) {
         try {
+          console.log('Trying to load tileset:', url);
           await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
+            img.onload = () => {
+              console.log(`Loaded: ${url}, size: ${img.width}x${img.height}`);
+              resolve();
+            };
+            img.onerror = (e) => {
+              console.log(`Failed to load: ${url}`, e);
+              reject(new Error('Load failed'));
+            };
             img.src = url + '?t=' + Date.now();
           });
           atlasImage = img;
+          // Calculate grid dimensions based on user-specified tile size
           atlasCols = Math.floor(img.width / TILE_PX);
           atlasRows = Math.floor(img.height / TILE_PX);
-          setStatus(`✅ Loaded tileset: ${url} (${atlasCols}×${atlasRows} tiles)`);
-          buildAtlasPalette();
-          render();
-          return;
-        } catch (e) { /* try next */ }
+          loadedUrl = url;
+          break;
+        } catch (e) {
+          console.log(`Could not load ${url}, trying next...`);
+        }
       }
-      setStatus('❌ No tileset found');
+
+      if (loadedUrl) {
+        setStatus(`✅ Loaded: ${loadedUrl} (${img.width}x${img.height}, ${atlasCols}x${atlasRows} tiles @ ${TILE_PX}px)`);
+
+        // Debug: Log actual image dimensions
+        console.log(`Tileset loaded: ${loadedUrl}`);
+        console.log(`Image size: ${img.width}x${img.height} pixels`);
+        console.log(`Tile size: ${TILE_PX}px`);
+        console.log(`Grid: ${atlasCols}x${atlasRows} tiles`);
+
+        buildAtlasPalette();
+        render();
+      } else {
+        setStatus('❌ No tileset found. Check console for errors.');
+        atlasCols = 2;
+        atlasRows = 2;
+        buildAtlasPalette();
+      }
     }
 
     function buildAtlasPalette() {
       const grid = document.getElementById('atlasGrid');
       grid.innerHTML = '';
 
-      for (let row = 0; row < atlasRows; row++) {
-        for (let col = 0; col < atlasCols; col++) {
-          const div = document.createElement('div');
-          div.className = 'atlas-tile';
-          div.dataset.col = col;
-          div.dataset.row = row;
-
-          // Draw the tile from the atlas onto a small canvas
-          const tileCanvas = document.createElement('canvas');
-          tileCanvas.width = TILE_PX;
-          tileCanvas.height = TILE_PX;
-          const tileCtx = tileCanvas.getContext('2d');
-          tileCtx.drawImage(atlasImage, col * TILE_PX, row * TILE_PX, TILE_PX, TILE_PX, 0, 0, TILE_PX, TILE_PX);
-          div.appendChild(tileCanvas);
-
-          // Label
-          const label = document.createElement('div');
-          label.className = 'label';
-          label.textContent = `${col},${row}`;
-          div.appendChild(label);
-
-          div.onclick = () => selectAtlasTile(col, row);
-          grid.appendChild(div);
-        }
+      if (!atlasImage) {
+        // Show placeholder message
+        grid.innerHTML = '<div style="color:#666;font-size:.75rem;grid-column:1/-1">No tileset loaded</div>';
+        return;
       }
+
+      // Create a container with tile selection
+      const container = document.createElement('div');
+      container.style.cssText = 'width:100%;margin-bottom:12px;';
+
+      const infoLabel = document.createElement('div');
+      infoLabel.style.cssText = 'font-size:0.7rem;color:#888;margin-bottom:6px;';
+      infoLabel.textContent = `Tiles: ${atlasCols}x${atlasRows} grid (@ ${TILE_PX}px)`;
+      container.appendChild(infoLabel);
+
+      // Button to open in-app modal
+      const openModalBtn = document.createElement('button');
+      openModalBtn.textContent = '🖼️ Select Tile';
+      openModalBtn.id = 'openTileModal';
+      openModalBtn.style.cssText = 'display:block;width:100%;padding:10px;background:#e94560;color:#fff;border:none;border-radius:6px;font-size:0.85rem;margin-bottom:8px;cursor:pointer;';
+      container.appendChild(openModalBtn);
+
+      grid.appendChild(container);
+
+      // Attach modal open handler - call the global function
+      openModalBtn.onclick = function () {
+        openTileSelectorModal();
+      };
 
       // Auto-select first tile
       if (atlasCols > 0 && atlasRows > 0) {
         selectAtlasTile(0, 0);
       }
     }
+
+    // Global function to open tile selector modal with grid of clickable tiles
+    window.openTileSelectorModal = function () {
+      // Remove existing modal if any
+      const existing = document.getElementById('tileSelectorModal');
+      if (existing) existing.remove();
+
+      if (!atlasImage) {
+        alert('No tileset loaded!');
+        return;
+      }
+
+      // Create modal
+      const modal = document.createElement('div');
+      modal.id = 'tileSelectorModal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:2000;display:flex;flex-direction:column;align-items:center;padding:20px;overflow:auto;';
+
+      // Title
+      const title = document.createElement('h2');
+      title.textContent = '🖱️ Click a Tile to Select It';
+      title.style.cssText = 'color:#e94560;margin-bottom:10px;font-size:1.2rem;';
+      modal.appendChild(title);
+
+      // Instructions
+      const instructions = document.createElement('div');
+      instructions.style.cssText = 'color:#aaa;margin-bottom:15px;font-size:0.9rem;';
+      instructions.textContent = 'Click on any tile below to select it. Hover to see coordinates.';
+      modal.appendChild(instructions);
+
+      // Current tile size display
+      const sizeInfo = document.createElement('div');
+      sizeInfo.style.cssText = 'color:#4fc3f7;margin-bottom:15px;font-size:0.85rem;';
+      sizeInfo.textContent = `Current tile size setting: ${TILE_PX}px — If tiles look wrong, adjust Tile Size and try again`;
+      modal.appendChild(sizeInfo);
+
+      // Create scrollable grid container
+      const gridContainer = document.createElement('div');
+      gridContainer.style.cssText = 'max-width:90vw;max-height:65vh;overflow:auto;display:grid;gap:2px;background:#222;padding:10px;border:2px solid #4fc3f7;';
+
+      // Use a fixed display size for each tile (larger for easier clicking)
+      const DISPLAY_SIZE = 48; // pixels per tile in the selector
+
+      // Set grid template
+      gridContainer.style.gridTemplateColumns = `repeat(${atlasCols}, ${DISPLAY_SIZE}px)`;
+
+      // Create clickable tile elements
+      for (let row = 0; row < atlasRows; row++) {
+        for (let col = 0; col < atlasCols; col++) {
+          const tileDiv = document.createElement('div');
+          tileDiv.style.cssText = `
+            width: ${DISPLAY_SIZE}px;
+            height: ${DISPLAY_SIZE}px;
+            background-image: url(${atlasImage.src});
+            background-position: -${col * TILE_PX}px -${row * TILE_PX}px;
+            background-size: ${atlasImage.width}px ${atlasImage.height}px;
+            image-rendering: pixelated;
+            cursor: pointer;
+            border: 1px solid #444;
+          `;
+
+          // Hover effects
+          tileDiv.onmouseenter = function () {
+            this.style.border = '2px solid #ff8800';
+            this.style.zIndex = '10';
+            infoDiv.textContent = `Hovering: Tile (${col}, ${row}) - Click to select`;
+            infoDiv.style.color = '#ff8800';
+          };
+
+          tileDiv.onmouseleave = function () {
+            this.style.border = '1px solid #444';
+            this.style.zIndex = '1';
+            infoDiv.textContent = 'Hover over a tile to see its coordinates';
+            infoDiv.style.color = '#4fc3f7';
+          };
+
+          // Click to select
+          tileDiv.onclick = function () {
+            selectAtlasTile(col, row);
+            modal.remove();
+          };
+
+          gridContainer.appendChild(tileDiv);
+        }
+      }
+      modal.appendChild(gridContainer);
+
+      // Info display
+      const infoDiv = document.createElement('div');
+      infoDiv.style.cssText = 'color:#4fc3f7;margin:15px 0;font-size:0.9rem;min-height:20px;';
+      infoDiv.textContent = 'Hover over a tile to see its coordinates';
+      modal.appendChild(infoDiv);
+
+      // Close button
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕ Close';
+      closeBtn.style.cssText = 'margin-top:10px;padding:10px 30px;background:#333;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:1rem;';
+      closeBtn.onclick = () => modal.remove();
+      modal.appendChild(closeBtn);
+
+      document.body.appendChild(modal);
+    };
 
     function selectAtlasTile(col, row) {
       const func = document.getElementById('funcSelect').value;
@@ -640,11 +972,21 @@
       });
       document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
 
+      // Update manual input fields
+      document.getElementById('tileCol').value = col;
+      document.getElementById('tileRow').value = row;
+
       document.getElementById('infoAtlas').textContent = `(${col}, ${row})`;
       document.getElementById('infoFunc').textContent = selectedTile.func;
       document.getElementById('infoCol').textContent = FUNC_COLLISION[selectedTile.func] ? '✅ Yes' : '❌ No';
 
       setStatus(`Selected tile (${col},${row}) — ${selectedTile.func}`);
+    }
+
+    function applyManualTile() {
+      const col = parseInt(document.getElementById('tileCol').value) || 0;
+      const row = parseInt(document.getElementById('tileRow').value) || 0;
+      selectAtlasTile(col, row);
     }
 
     function updateTileFunction() {
@@ -717,6 +1059,13 @@
     // ============================================================
     function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw uploaded image as background if available (check global)
+      if (window.uploadedImage) {
+        ctx.globalAlpha = 0.4; // Semi-transparent so we can see the tiles
+        ctx.drawImage(window.uploadedImage, 0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1.0;
+      }
 
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {

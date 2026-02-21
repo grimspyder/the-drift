@@ -154,7 +154,11 @@ const server = http.createServer(async (req, res) => {
             res.end('Not found: ' + req.url);
             return;
         }
-        res.writeHead(200, { 'Content-Type': contentType });
+        // Add CORS headers for all responses (needed for canvas image manipulation)
+        res.writeHead(200, {
+            'Content-Type': contentType,
+            'Access-Control-Allow-Origin': '*'
+        });
         res.end(data);
     });
 });
