@@ -4,322 +4,379 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Drift — Tile Selector</title>
+  <title>The Drift — Map Editor</title>
   <style>
     * {
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
+      box-sizing: border-box
     }
 
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
       background: #1a1a2e;
       color: #e0e0e0;
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden
     }
 
     header {
       background: #16213e;
-      padding: 16px 24px;
+      padding: 10px 20px;
       border-bottom: 2px solid #0f3460;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 16px
     }
 
     header h1 {
-      font-size: 1.4rem;
-      color: #e94560;
+      font-size: 1.2rem;
+      color: #e94560
     }
 
     header span {
-      color: #888;
-      font-size: 0.85rem;
-    }
-
-    .container {
-      display: flex;
-      gap: 20px;
-      padding: 20px;
-      height: calc(100vh - 70px);
-    }
-
-    /* Left panel - sprite sheet */
-    .sprite-panel {
-      flex: 2;
-      background: #16213e;
-      border-radius: 12px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .sprite-panel h2 {
-      font-size: 1rem;
-      margin-bottom: 12px;
-      color: #e94560;
-    }
-
-    .controls-row {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .controls-row label {
-      font-size: 0.85rem;
-      color: #aaa;
-    }
-
-    select,
-    input[type="number"] {
-      background: #0f3460;
-      color: #e0e0e0;
-      border: 1px solid #333;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-    }
-
-    .btn {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-
-    .btn-primary {
-      background: #e94560;
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: #c73550;
-    }
-
-    .btn-wall {
-      background: #4a2c6e;
-      color: white;
-    }
-
-    .btn-wall:hover {
-      background: #5a3580;
-    }
-
-    .btn-wall.active {
-      background: #7c3aed;
-      box-shadow: 0 0 12px rgba(124, 58, 237, 0.5);
-    }
-
-    .btn-floor {
-      background: #1e5a3a;
-      color: white;
-    }
-
-    .btn-floor:hover {
-      background: #267a4e;
-    }
-
-    .btn-floor.active {
-      background: #10b981;
-      box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
-    }
-
-    .btn-export {
-      background: #0f3460;
-      color: #4fc3f7;
-      border: 1px solid #4fc3f7;
-    }
-
-    .btn-export:hover {
-      background: #4fc3f7;
-      color: #1a1a2e;
-    }
-
-    .sprite-viewport {
-      flex: 1;
-      overflow: auto;
-      background: #111;
-      border-radius: 8px;
-      position: relative;
-      cursor: crosshair;
-    }
-
-    .sprite-viewport canvas {
-      display: block;
-      image-rendering: pixelated;
-    }
-
-    .selection-overlay {
-      position: absolute;
-      border: 2px dashed;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .selection-wall {
-      border-color: #7c3aed;
-      background: rgba(124, 58, 237, 0.15);
-    }
-
-    .selection-floor {
-      border-color: #10b981;
-      background: rgba(16, 185, 129, 0.15);
-    }
-
-    .selection-label {
-      position: absolute;
-      top: -22px;
-      left: 0;
-      font-size: 11px;
-      font-weight: bold;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-
-    .selection-wall .selection-label {
-      background: #7c3aed;
-      color: white;
-    }
-
-    .selection-floor .selection-label {
-      background: #10b981;
-      color: white;
-    }
-
-    /* Right panel - preview & export */
-    .preview-panel {
-      flex: 1;
-      background: #16213e;
-      border-radius: 12px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .preview-panel h2 {
-      font-size: 1rem;
-      color: #e94560;
-    }
-
-    .tile-preview {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-    }
-
-    .tile-card {
-      text-align: center;
-    }
-
-    .tile-card h3 {
-      font-size: 0.8rem;
-      color: #aaa;
-      margin-bottom: 8px;
-    }
-
-    .tile-card canvas {
-      border: 2px solid #333;
-      border-radius: 4px;
-      image-rendering: pixelated;
-      background: repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50% / 16px 16px;
-    }
-
-    .map-preview {
-      flex: 1;
-      overflow: auto;
-      background: #111;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .map-preview canvas {
-      image-rendering: pixelated;
-    }
-
-    .world-selector {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .world-btn {
-      padding: 6px 12px;
-      border: 1px solid #333;
-      background: #0f3460;
-      color: #e0e0e0;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: all 0.2s;
-    }
-
-    .world-btn:hover {
-      background: #1a4a80;
-    }
-
-    .world-btn.active {
-      background: #e94560;
-      border-color: #e94560;
-      color: white;
-    }
-
-    .status {
-      font-size: 0.8rem;
-      padding: 8px 12px;
-      border-radius: 6px;
-      background: #0a0a1a;
-      color: #4fc3f7;
-      min-height: 32px;
-    }
-
-    .drop-zone {
-      border: 2px dashed #333;
-      border-radius: 8px;
-      padding: 40px;
-      text-align: center;
       color: #666;
-      cursor: pointer;
-      transition: all 0.2s;
+      font-size: .8rem
     }
 
-    .drop-zone:hover {
-      border-color: #e94560;
+    .app {
+      display: flex;
+      height: calc(100vh - 48px)
+    }
+
+    /* Left: Tile Palette */
+    .palette-panel {
+      width: 240px;
+      background: #16213e;
+      padding: 12px;
+      overflow-y: auto;
+      border-right: 1px solid #0f3460;
+      flex-shrink: 0
+    }
+
+    .palette-panel h3 {
+      font-size: .8rem;
       color: #e94560;
+      margin: 10px 0 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px
     }
 
-    .grid-size-input {
-      width: 60px;
+    .palette-panel h3:first-child {
+      margin-top: 0
     }
 
-    .nudge-step-input {
-      width: 50px;
+    .atlas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 48px);
+      gap: 4px;
+      margin-bottom: 12px
     }
 
-    .pos-readout {
-      font-size: 0.75rem;
-      color: #4fc3f7;
-      background: #0a0a1a;
+    .atlas-tile {
+      width: 48px;
+      height: 48px;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      image-rendering: pixelated;
+      background: #0a0a15;
+      position: relative;
+      overflow: hidden
+    }
+
+    .atlas-tile:hover {
+      border-color: #4fc3f7
+    }
+
+    .atlas-tile.active {
+      border-color: #e94560;
+      box-shadow: 0 0 8px rgba(233, 69, 96, .5)
+    }
+
+    .atlas-tile canvas {
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated
+    }
+
+    .atlas-tile .label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, .7);
+      font-size: .55rem;
+      text-align: center;
+      padding: 1px;
+      color: #ccc
+    }
+
+    .tile-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 6px 8px;
+      background: #0f3460;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      color: #ccc;
+      cursor: pointer;
+      font-size: .78rem;
+      margin-bottom: 3px;
+      transition: all .15s
+    }
+
+    .tile-btn:hover {
+      background: #1a4a80;
+      color: #fff
+    }
+
+    .tile-btn.active {
+      border-color: #e94560;
+      background: #2a1530;
+      color: #fff
+    }
+
+    .tile-btn .icon {
+      font-size: 1.1rem;
+      width: 22px;
+      text-align: center
+    }
+
+    .tile-btn .info {
+      font-size: .65rem;
+      color: #666;
+      margin-left: auto
+    }
+
+    .func-select {
+      width: 100%;
+      background: #0f3460;
+      color: #ccc;
+      border: 1px solid #333;
+      padding: 4px;
+      border-radius: 4px;
+      font-size: .72rem;
+      margin-top: 4px
+    }
+
+    /* Center: Map Canvas */
+    .canvas-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #11192e;
+      align-items: center;
+      flex-wrap: wrap;
+      border-bottom: 1px solid #0f3460
+    }
+
+    .toolbar label {
+      font-size: .78rem;
+      color: #aaa
+    }
+
+    .toolbar select,
+    .toolbar input[type=text] {
+      background: #0f3460;
+      color: #e0e0e0;
+      border: 1px solid #333;
       padding: 4px 8px;
       border-radius: 4px;
-      font-family: 'Consolas', monospace;
-      min-width: 200px;
+      font-size: .78rem
     }
 
-    .keyboard-hint {
-      font-size: 0.7rem;
-      color: #666;
-      margin-top: 4px;
+    .toolbar select {
+      min-width: 100px
+    }
+
+    .tool-btn {
+      padding: 5px 12px;
+      background: #0f3460;
+      color: #aaa;
+      border: 1px solid #333;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .75rem;
+      font-weight: 600;
+      transition: all .15s
+    }
+
+    .tool-btn:hover {
+      background: #1a4a80;
+      color: #fff
+    }
+
+    .tool-btn.active {
+      background: #e94560;
+      color: #fff;
+      border-color: #e94560
+    }
+
+    .save-btn {
+      background: #0a2e0a;
+      color: #4caf50;
+      border-color: #4caf50
+    }
+
+    .save-btn:hover {
+      background: #4caf50;
+      color: #000
+    }
+
+    .load-btn {
+      background: #0f3460;
+      color: #4fc3f7;
+      border-color: #4fc3f7
+    }
+
+    .load-btn:hover {
+      background: #4fc3f7;
+      color: #000
+    }
+
+    .canvas-viewport {
+      flex: 1;
+      overflow: auto;
+      background: #0a0a15;
+      cursor: crosshair;
+      position: relative
+    }
+
+    .canvas-viewport canvas {
+      image-rendering: pixelated
+    }
+
+    /* Right: Info Panel */
+    .info-panel {
+      width: 220px;
+      background: #16213e;
+      padding: 12px;
+      overflow-y: auto;
+      border-left: 1px solid #0f3460;
+      flex-shrink: 0
+    }
+
+    .info-panel h3 {
+      font-size: .8rem;
+      color: #e94560;
+      margin: 10px 0 6px;
+      text-transform: uppercase
+    }
+
+    .info-panel h3:first-child {
+      margin-top: 0
+    }
+
+    .info-box {
+      background: #0a0a1a;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 8px;
+      font-size: .75rem;
+      line-height: 1.5
+    }
+
+    .info-box .label {
+      color: #888
+    }
+
+    .info-box .value {
+      color: #4fc3f7;
+      font-family: Consolas, monospace
+    }
+
+    .status-bar {
+      padding: 6px 12px;
+      background: #0a0a15;
+      font-size: .72rem;
+      color: #4fc3f7;
+      border-top: 1px solid #0f3460
+    }
+
+    .minimap {
+      width: 100%;
+      aspect-ratio: 16/10;
+      background: #111;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      overflow: hidden
+    }
+
+    .minimap canvas {
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, .7);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center
+    }
+
+    .modal-overlay.show {
+      display: flex
+    }
+
+    .modal {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 12px;
+      padding: 20px;
+      min-width: 350px;
+      max-height: 80vh;
+      overflow-y: auto
+    }
+
+    .modal h2 {
+      color: #e94560;
+      font-size: 1rem;
+      margin-bottom: 12px
+    }
+
+    .modal-list {
+      list-style: none
+    }
+
+    .modal-list li {
+      padding: 8px;
+      background: #0f3460;
+      margin-bottom: 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: .8rem
+    }
+
+    .modal-list li:hover {
+      background: #1a4a80
+    }
+
+    .modal-close {
+      margin-top: 12px;
+      padding: 6px 16px;
+      background: #333;
+      color: #ccc;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer
     }
   </style>
 </head>
@@ -327,463 +384,660 @@
 <body>
 
   <header>
-    <h1>🎮 The Drift — Tile Selector</h1>
-    <span>Select wall & floor tiles from your sprite sheets, then export for the game</span>
+    <h1>🗺️ The Drift — Map Editor</h1>
+    <span>Create dungeon maps for the game</span>
   </header>
 
-  <div class="container">
-    <!-- Left: Sprite Sheet Viewer -->
-    <div class="sprite-panel">
-      <h2>Sprite Sheet</h2>
-
-      <div class="controls-row">
-        <div class="world-selector" id="worldSelector">
-          <button class="world-btn active" data-world="0">World 0</button>
-          <button class="world-btn" data-world="1">World 1</button>
-          <button class="world-btn" data-world="2">World 2</button>
-          <button class="world-btn" data-world="3">World 3</button>
-          <button class="world-btn" data-world="4">World 4</button>
-          <button class="world-btn" data-world="5">World 5</button>
-        </div>
+  <div class="app">
+    <!-- LEFT: Tile Palette -->
+    <div class="palette-panel" id="palettePanel">
+      <h3>🎨 Tileset Tiles</h3>
+      <div class="atlas-grid" id="atlasGrid">
+        <div style="color:#666;font-size:.75rem;grid-column:1/-1">Select a world to load tiles</div>
       </div>
 
-      <div class="controls-row">
-        <button class="btn btn-wall" id="btnSelectWall" onclick="setMode('wall')">🧱 Select Wall</button>
-        <button class="btn btn-floor" id="btnSelectFloor" onclick="setMode('floor')">🟫 Select Floor</button>
-        <label>Grid: <input type="number" id="gridSize" class="grid-size-input" value="32" min="8" max="256" step="8"
-            onchange="updateGrid()"> px</label>
-        <label>Nudge: <input type="number" id="nudgeStep" class="nudge-step-input" value="1" min="1" max="32" step="1">
-          px</label>
-        <label><input type="checkbox" id="showGrid" checked onchange="redraw()"> Show Grid</label>
+      <h3>Tile Function</h3>
+      <select class="func-select" id="funcSelect" onchange="updateTileFunction()">
+        <option value="solid">🧱 Solid (blocks movement)</option>
+        <option value="floor" selected>🟫 Floor (walkable)</option>
+        <option value="hazard">⚠️ Hazard (damages/slows)</option>
+        <option value="interactive">🚪 Interactive</option>
+        <option value="light">💡 Light source</option>
+        <option value="decorative">✨ Decorative (walkable)</option>
+      </select>
+      <div class="info-box" style="margin-top:6px;font-size:.68rem;color:#888">
+        Function determines collision behavior when placed in-game.
+        <br><b>Solid</b> = wall collision
+        <br><b>Floor/Decorative</b> = walkable
+        <br><b>Hazard</b> = walkable + damage
       </div>
-      <div class="controls-row">
-        <span class="pos-readout" id="posReadout">No selection — click a tile after choosing Wall or Floor</span>
-      </div>
-      <div class="keyboard-hint">⌨️ Arrow keys = nudge position &nbsp;|&nbsp; Shift+Arrow = resize &nbsp;|&nbsp; +/- =
-        zoom</div>
 
-      <div class="sprite-viewport" id="viewport">
-        <canvas id="spriteCanvas"></canvas>
-      </div>
+      <h3>📍 Special Markers</h3>
+      <button class="tile-btn" data-tile="spawn_start" onclick="selectSpecial('start')">
+        <span class="icon">🟢</span>Player Start<span class="info">1 only</span>
+      </button>
+      <button class="tile-btn" data-tile="spawn_exit" onclick="selectSpecial('exit')">
+        <span class="icon">🌀</span>Exit Portal<span class="info">1 only</span>
+      </button>
+      <button class="tile-btn" data-tile="spawn_enemy" onclick="selectSpecial('enemy')">
+        <span class="icon">👹</span>Enemy Spawn<span class="info">0+</span>
+      </button>
+
+      <h3>🗑️ Eraser</h3>
+      <button class="tile-btn" data-tile="eraser" onclick="selectEraser()">
+        <span class="icon">❌</span>Void / Erase
+      </button>
     </div>
 
-    <!-- Right: Preview & Export -->
-    <div class="preview-panel">
-      <h2>Selected Tiles</h2>
+    <!-- CENTER: Canvas -->
+    <div class="canvas-area">
+      <div class="toolbar">
+        <label>Size:</label>
+        <select id="mapSize" onchange="resizeMap()">
+          <option value="25,18">Small (25×18)</option>
+          <option value="35,22" selected>Medium (35×22)</option>
+          <option value="45,28">Large (45×28)</option>
+          <option value="60,38">Epic (60×38)</option>
+        </select>
 
-      <div class="tile-preview">
-        <div class="tile-card">
-          <h3>🧱 WALL (collides)</h3>
-          <canvas id="wallPreview" width="128" height="128"></canvas>
+        <label>World:</label>
+        <select id="worldId" onchange="loadWorldAtlas()">
+          <option value="0">0 - Prime</option>
+          <option value="1">1 - Verdant</option>
+          <option value="2">2 - Arid</option>
+          <option value="3">3 - Crystal</option>
+          <option value="4">4 - Ashen</option>
+          <option value="5">5 - Shadow</option>
+        </select>
+
+        <label>Name:</label>
+        <input type="text" id="mapName" value="Prime World - Level 1" style="width:160px">
+
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="tool-btn active" data-tool="paint" onclick="setTool('paint')">🖌️ Paint</button>
+          <button class="tool-btn" data-tool="fill" onclick="setTool('fill')">🪣 Fill</button>
+          <button class="tool-btn" data-tool="rect" onclick="setTool('rect')">⬜ Rect</button>
+          <button class="tool-btn" data-tool="pick" onclick="setTool('pick')">💉 Pick</button>
         </div>
-        <div class="tile-card">
-          <h3>🟫 FLOOR (walkable)</h3>
-          <canvas id="floorPreview" width="128" height="128"></canvas>
+
+        <div style="display:flex;gap:6px">
+          <button class="tool-btn" onclick="undo()">↩️</button>
+          <button class="tool-btn" onclick="redo()">↪️</button>
+        </div>
+
+        <div style="display:flex;gap:6px">
+          <button class="tool-btn save-btn" onclick="saveMap()">💾 Save</button>
+          <button class="tool-btn load-btn" onclick="showLoadModal()">📂 Load</button>
         </div>
       </div>
 
-      <h2>Map Preview (5×5)</h2>
-      <div class="map-preview">
-        <canvas id="mapPreview" width="320" height="320"></canvas>
+      <div class="canvas-viewport" id="viewport">
+        <canvas id="mapCanvas"></canvas>
       </div>
 
-      <div class="controls-row">
-        <button class="btn btn-export" onclick="exportAtlas()">💾 Export Atlas for World</button>
-        <button class="btn btn-export" onclick="exportAllAtlases()">📦 Export All Worlds</button>
+      <div class="status-bar" id="statusBar">Select a world to load tileset tiles, then paint on the grid.</div>
+    </div>
+
+    <!-- RIGHT: Info Panel -->
+    <div class="info-panel">
+      <h3>Selected Tile</h3>
+      <div class="info-box" id="tileInfo">
+        <div><span class="label">Atlas:</span> <span class="value" id="infoAtlas">—</span></div>
+        <div><span class="label">Function:</span> <span class="value" id="infoFunc">floor</span></div>
+        <div><span class="label">Collision:</span> <span class="value" id="infoCol">❌ No</span></div>
       </div>
 
-      <div class="status" id="status">Load a sprite sheet to begin. Click on a tile to select it as wall or floor.</div>
+      <h3>Map Stats</h3>
+      <div class="info-box" id="mapStats">
+        <div><span class="label">Size:</span> <span class="value" id="statsSize">35×22</span></div>
+        <div><span class="label">Tiles placed:</span> <span class="value" id="statsTiles">0</span></div>
+        <div><span class="label">Player Start:</span> <span class="value" id="statsStart">❌</span></div>
+        <div><span class="label">Exit Portal:</span> <span class="value" id="statsExit">❌</span></div>
+        <div><span class="label">Enemy Spawns:</span> <span class="value" id="statsEnemies">0</span></div>
+      </div>
+
+      <h3>Mini Map</h3>
+      <div class="minimap">
+        <canvas id="minimapCanvas"></canvas>
+      </div>
+
+      <h3>Keyboard</h3>
+      <div class="info-box" style="font-size:.68rem;color:#666">
+        <div>Ctrl+Z / Y = Undo/Redo</div>
+        <div>B=Paint F=Fill R=Rect I=Pick</div>
+        <div>0=Erase Click+Drag=Multi</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Modal -->
+  <div class="modal-overlay" id="loadModal">
+    <div class="modal">
+      <h2>📂 Load Map</h2>
+      <ul class="modal-list" id="mapList"></ul>
+      <button class="modal-close" onclick="hideLoadModal()">Cancel</button>
     </div>
   </div>
 
   <script>
-    const WORLDS = ['world_0', 'world_1', 'world_2', 'world_3', 'world_4', 'world_5'];
-    const WORLD_NAMES = ['Prime World', 'Verdant Realm', 'Arid Wastes', 'Crystalline Void', 'Ashen Realm', 'Shadow Realm'];
+    // ============================================================
+    // STATE
+    // ============================================================
+    let mapWidth = 35, mapHeight = 22;
+    let tiles = [];       // 2D [y][x] of {col, row, func} or null (void)
+    let selectedTile = null;  // {col, row, func} — atlas coord + function
+    let selectedSpecial = null; // 'start', 'exit', 'enemy', or null
+    let isEraser = false;
+    let currentTool = 'paint';
+    let isDrawing = false;
+    let rectStart = null;
+    let undoStack = [], redoStack = [];
 
-    let currentWorld = 0;
-    let currentMode = null; // 'wall' or 'floor'
-    let gridSize = 32;
-    let spriteImage = null;
-    let zoom = 1;
+    let playerStart = null;
+    let exitPortal = null;
+    let enemySpawns = [];
 
-    // Store selections per world: { wall: {x, y, w, h}, floor: {x, y, w, h} }
-    let worldSelections = {};
-    WORLDS.forEach((w, i) => { worldSelections[i] = { wall: null, floor: null }; });
+    // Atlas image data
+    let atlasImage = null;  // HTMLImageElement
+    let atlasCols = 0, atlasRows = 0;
+    const TILE_PX = 32;  // Pixels per tile in atlas
 
-    const spriteCanvas = document.getElementById('spriteCanvas');
-    const spriteCtx = spriteCanvas.getContext('2d');
-    const wallPreviewCanvas = document.getElementById('wallPreview');
-    const wallPreviewCtx = wallPreviewCanvas.getContext('2d');
-    const floorPreviewCanvas = document.getElementById('floorPreview');
-    const floorPreviewCtx = floorPreviewCanvas.getContext('2d');
-    const mapPreviewCanvas = document.getElementById('mapPreview');
-    const mapPreviewCtx = mapPreviewCanvas.getContext('2d');
+    const CELL = 28;  // Grid cell size on screen
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const miniCanvas = document.getElementById('minimapCanvas');
+    const miniCtx = miniCanvas.getContext('2d');
 
-    // Load sprite sheets from the assets folder
-    function loadWorld(worldIndex) {
-      currentWorld = worldIndex;
+    // Function colors for minimap/preview when atlas not loaded
+    const FUNC_COLORS = {
+      solid: '#2a2a35', floor: '#8a7a60', hazard: '#cc4400',
+      interactive: '#8b6535', light: '#cc8800', decorative: '#6a5a4a'
+    };
+    const FUNC_COLLISION = { solid: true, floor: false, hazard: false, interactive: false, light: true, decorative: false };
 
-      // Update buttons
-      document.querySelectorAll('.world-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === worldIndex);
-      });
-
+    // ============================================================
+    // ATLAS LOADING
+    // ============================================================
+    async function loadWorldAtlas() {
+      const worldId = document.getElementById('worldId').value;
       const img = new Image();
-      img.onload = () => {
-        spriteImage = img;
-        // Auto-fit zoom
-        const viewport = document.getElementById('viewport');
-        zoom = Math.min(
-          (viewport.clientWidth - 20) / img.width,
-          (viewport.clientHeight - 20) / img.height,
-          2
-        );
-        zoom = Math.max(zoom, 0.5);
+      img.crossOrigin = 'anonymous';
 
-        spriteCanvas.width = img.width * zoom;
-        spriteCanvas.height = img.height * zoom;
-        redraw();
-        updatePreviews();
-        setStatus(`Loaded ${WORLD_NAMES[worldIndex]} (${img.width}×${img.height}). Select wall and floor tiles.`);
-      };
-      img.onerror = () => {
-        setStatus(`❌ Could not load /assets/tilesets/${WORLDS[worldIndex]}.png — make sure the server is running.`);
-      };
-      img.src = `/assets/tilesets/${WORLDS[worldIndex]}.png`;
-    }
-
-    function setMode(mode) {
-      currentMode = mode;
-      document.getElementById('btnSelectWall').classList.toggle('active', mode === 'wall');
-      document.getElementById('btnSelectFloor').classList.toggle('active', mode === 'floor');
-      setStatus(`Click on the sprite sheet to select a ${mode} tile.`);
-    }
-
-    function updateGrid() {
-      gridSize = parseInt(document.getElementById('gridSize').value) || 32;
-      redraw();
-    }
-
-    function redraw() {
-      if (!spriteImage) return;
-
-      spriteCtx.imageSmoothingEnabled = false;
-      spriteCtx.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
-
-      // Draw checkerboard background
-      const checkSize = 16;
-      for (let y = 0; y < spriteCanvas.height; y += checkSize) {
-        for (let x = 0; x < spriteCanvas.width; x += checkSize) {
-          spriteCtx.fillStyle = ((x + y) / checkSize) % 2 === 0 ? '#2a2a2a' : '#222';
-          spriteCtx.fillRect(x, y, checkSize, checkSize);
-        }
-      }
-
-      // Draw sprite sheet
-      spriteCtx.drawImage(spriteImage, 0, 0, spriteCanvas.width, spriteCanvas.height);
-
-      // Draw grid
-      if (document.getElementById('showGrid').checked) {
-        spriteCtx.strokeStyle = 'rgba(255,255,255,0.15)';
-        spriteCtx.lineWidth = 1;
-        const scaledGrid = gridSize * zoom;
-        for (let x = 0; x < spriteCanvas.width; x += scaledGrid) {
-          spriteCtx.beginPath();
-          spriteCtx.moveTo(x, 0);
-          spriteCtx.lineTo(x, spriteCanvas.height);
-          spriteCtx.stroke();
-        }
-        for (let y = 0; y < spriteCanvas.height; y += scaledGrid) {
-          spriteCtx.beginPath();
-          spriteCtx.moveTo(0, y);
-          spriteCtx.lineTo(spriteCanvas.width, y);
-          spriteCtx.stroke();
-        }
-      }
-
-      // Draw selections
-      const sel = worldSelections[currentWorld];
-      if (sel.wall) drawSelection(sel.wall, '#7c3aed', 'WALL');
-      if (sel.floor) drawSelection(sel.floor, '#10b981', 'FLOOR');
-    }
-
-    function drawSelection(rect, color, label) {
-      const x = rect.x * zoom;
-      const y = rect.y * zoom;
-      const w = rect.w * zoom;
-      const h = rect.h * zoom;
-
-      spriteCtx.strokeStyle = color;
-      spriteCtx.lineWidth = 3;
-      spriteCtx.strokeRect(x, y, w, h);
-
-      spriteCtx.fillStyle = color + '30';
-      spriteCtx.fillRect(x, y, w, h);
-
-      // Label
-      spriteCtx.fillStyle = color;
-      spriteCtx.font = 'bold 14px sans-serif';
-      spriteCtx.fillText(label, x + 4, y - 6);
-    }
-
-    // Handle clicks on sprite canvas
-    spriteCanvas.addEventListener('mousedown', (e) => {
-      if (!currentMode || !spriteImage) return;
-
-      const rect = spriteCanvas.getBoundingClientRect();
-      const scrollX = document.getElementById('viewport').scrollLeft;
-      const scrollY = document.getElementById('viewport').scrollTop;
-
-      // Get pixel coordinates in the original image
-      const px = (e.clientX - rect.left + scrollX) / zoom;
-      const py = (e.clientY - rect.top + scrollY) / zoom;
-
-      // Snap to grid
-      const gx = Math.floor(px / gridSize) * gridSize;
-      const gy = Math.floor(py / gridSize) * gridSize;
-
-      // Clamp to image bounds
-      const tileW = Math.min(gridSize, spriteImage.width - gx);
-      const tileH = Math.min(gridSize, spriteImage.height - gy);
-
-      if (tileW <= 0 || tileH <= 0) return;
-
-      worldSelections[currentWorld][currentMode] = { x: gx, y: gy, w: tileW, h: tileH };
-
-      redraw();
-      updatePreviews();
-
-      const tileName = currentMode === 'wall' ? '🧱 Wall' : '🟫 Floor';
-      setStatus(`${tileName} selected at (${gx}, ${gy}) — ${tileW}×${tileH}px from ${WORLD_NAMES[currentWorld]}`);
-      updatePosReadout();
-    });
-
-    function updatePreviews() {
-      const sel = worldSelections[currentWorld];
-
-      // Wall preview
-      wallPreviewCtx.imageSmoothingEnabled = false;
-      wallPreviewCtx.clearRect(0, 0, 128, 128);
-      if (sel.wall && spriteImage) {
-        wallPreviewCtx.drawImage(spriteImage, sel.wall.x, sel.wall.y, sel.wall.w, sel.wall.h, 0, 0, 128, 128);
-      } else {
-        wallPreviewCtx.fillStyle = '#333';
-        wallPreviewCtx.fillRect(0, 0, 128, 128);
-        wallPreviewCtx.fillStyle = '#666';
-        wallPreviewCtx.font = '14px sans-serif';
-        wallPreviewCtx.textAlign = 'center';
-        wallPreviewCtx.fillText('No wall', 64, 68);
-      }
-
-      // Floor preview
-      floorPreviewCtx.imageSmoothingEnabled = false;
-      floorPreviewCtx.clearRect(0, 0, 128, 128);
-      if (sel.floor && spriteImage) {
-        floorPreviewCtx.drawImage(spriteImage, sel.floor.x, sel.floor.y, sel.floor.w, sel.floor.h, 0, 0, 128, 128);
-      } else {
-        floorPreviewCtx.fillStyle = '#333';
-        floorPreviewCtx.fillRect(0, 0, 128, 128);
-        floorPreviewCtx.fillStyle = '#666';
-        floorPreviewCtx.font = '14px sans-serif';
-        floorPreviewCtx.textAlign = 'center';
-        floorPreviewCtx.fillText('No floor', 64, 68);
-      }
-
-      // Map preview - simple room with wall border and floor interior
-      updateMapPreview();
-    }
-
-    function updateMapPreview() {
-      const sel = worldSelections[currentWorld];
-      mapPreviewCtx.imageSmoothingEnabled = false;
-      mapPreviewCtx.clearRect(0, 0, 320, 320);
-
-      const tileSize = 32;
-      const cols = 10;
-      const rows = 10;
-      mapPreviewCanvas.width = cols * tileSize;
-      mapPreviewCanvas.height = rows * tileSize;
-
-      // Simple room layout: walls on edges, floor in middle, with corridor
-      const layout = [
-        'WWWWWWWWWW',
-        'WFFFWFFFFW',
-        'WFFFWFFFFW',
-        'WFFFFFFF W',
-        'WWWFFWWWWW',
-        'WFFFFWFFFW',
-        'WFFFFWFFFW',
-        'WFFFFFFFFW',
-        'WFFFFFFFFW',
-        'WWWWWWWWWW',
+      // Try world atlas first, then basic_tiles
+      const urls = [
+        `/assets/tilesets/world_${worldId}_atlas.png`,
+        `/assets/tilesets/basic_tiles.png`
       ];
 
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const ch = layout[r][c];
-          const dx = c * tileSize;
-          const dy = r * tileSize;
+      for (const url of urls) {
+        try {
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = url + '?t=' + Date.now();
+          });
+          atlasImage = img;
+          atlasCols = Math.floor(img.width / TILE_PX);
+          atlasRows = Math.floor(img.height / TILE_PX);
+          setStatus(`✅ Loaded tileset: ${url} (${atlasCols}×${atlasRows} tiles)`);
+          buildAtlasPalette();
+          render();
+          return;
+        } catch (e) { /* try next */ }
+      }
+      setStatus('❌ No tileset found');
+    }
 
-          if (ch === 'W' && sel.wall && spriteImage) {
-            mapPreviewCtx.drawImage(spriteImage, sel.wall.x, sel.wall.y, sel.wall.w, sel.wall.h, dx, dy, tileSize, tileSize);
-          } else if (ch === 'F' && sel.floor && spriteImage) {
-            mapPreviewCtx.drawImage(spriteImage, sel.floor.x, sel.floor.y, sel.floor.w, sel.floor.h, dx, dy, tileSize, tileSize);
-          } else {
-            mapPreviewCtx.fillStyle = ch === 'W' ? '#222' : '#444';
-            mapPreviewCtx.fillRect(dx, dy, tileSize, tileSize);
-          }
+    function buildAtlasPalette() {
+      const grid = document.getElementById('atlasGrid');
+      grid.innerHTML = '';
+
+      for (let row = 0; row < atlasRows; row++) {
+        for (let col = 0; col < atlasCols; col++) {
+          const div = document.createElement('div');
+          div.className = 'atlas-tile';
+          div.dataset.col = col;
+          div.dataset.row = row;
+
+          // Draw the tile from the atlas onto a small canvas
+          const tileCanvas = document.createElement('canvas');
+          tileCanvas.width = TILE_PX;
+          tileCanvas.height = TILE_PX;
+          const tileCtx = tileCanvas.getContext('2d');
+          tileCtx.drawImage(atlasImage, col * TILE_PX, row * TILE_PX, TILE_PX, TILE_PX, 0, 0, TILE_PX, TILE_PX);
+          div.appendChild(tileCanvas);
+
+          // Label
+          const label = document.createElement('div');
+          label.className = 'label';
+          label.textContent = `${col},${row}`;
+          div.appendChild(label);
+
+          div.onclick = () => selectAtlasTile(col, row);
+          grid.appendChild(div);
         }
       }
+
+      // Auto-select first tile
+      if (atlasCols > 0 && atlasRows > 0) {
+        selectAtlasTile(0, 0);
+      }
     }
 
-    function exportAtlas() {
-      const sel = worldSelections[currentWorld];
-      if (!sel.wall || !sel.floor || !spriteImage) {
-        setStatus('❌ Select both a wall and floor tile first!');
-        return;
-      }
+    function selectAtlasTile(col, row) {
+      const func = document.getElementById('funcSelect').value;
+      // Default: row 0 = solid, others = floor
+      if (row === 0) document.getElementById('funcSelect').value = 'solid';
+      else document.getElementById('funcSelect').value = 'floor';
 
-      // Create 64x32 atlas: wall at (0,0), floor at (32,0)
-      const atlas = document.createElement('canvas');
-      atlas.width = 64;
-      atlas.height = 32;
-      const ctx = atlas.getContext('2d');
-      ctx.imageSmoothingEnabled = false;
+      selectedTile = { col, row, func: document.getElementById('funcSelect').value };
+      selectedSpecial = null;
+      isEraser = false;
 
-      // Draw wall tile
-      ctx.drawImage(spriteImage, sel.wall.x, sel.wall.y, sel.wall.w, sel.wall.h, 0, 0, 32, 32);
-      // Draw floor tile
-      ctx.drawImage(spriteImage, sel.floor.x, sel.floor.y, sel.floor.w, sel.floor.h, 32, 0, 32, 32);
-
-      // Fill transparent pixels
-      const imageData = ctx.getImageData(0, 0, 64, 32);
-      const data = imageData.data;
-      // Wall fill: dark grey, Floor fill: medium grey
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i + 3] < 128) { // Transparent
-          const px = (i / 4) % 64;
-          if (px < 32) { // Wall half
-            data[i] = 30; data[i + 1] = 30; data[i + 2] = 40; data[i + 3] = 255;
-          } else { // Floor half
-            data[i] = 90; data[i + 1] = 85; data[i + 2] = 77; data[i + 3] = 255;
-          }
-        }
-      }
-      ctx.putImageData(imageData, 0, 0);
-
-      // Save directly to the tilesets folder via local server
-      atlas.toBlob((blob) => {
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const base64 = reader.result.split(',')[1];
-          const filename = `${WORLDS[currentWorld]}_atlas.png`;
-          try {
-            const resp = await fetch('/save-atlas', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ filename, data: base64 }),
-            });
-            const result = await resp.json();
-            if (result.success) {
-              setStatus(`✅ Saved ${filename} (${result.size} bytes) → ${result.path}`);
-            } else {
-              setStatus(`❌ Save failed: ${result.error}`);
-            }
-          } catch (err) {
-            setStatus(`❌ Server error: ${err.message}. Is the server running? (node server.js)`);
-          }
-        };
-        reader.readAsDataURL(blob);
-      }, 'image/png');
-    }
-
-    function exportAllAtlases() {
-      let exported = 0;
-      let missing = [];
-
-      for (let i = 0; i < 6; i++) {
-        const sel = worldSelections[i];
-        if (!sel.wall || !sel.floor) {
-          missing.push(`World ${i}`);
-          continue;
-        }
-        exported++;
-      }
-
-      if (missing.length > 0) {
-        setStatus(`⚠️ Missing selections for: ${missing.join(', ')}. Select wall+floor for each world first.`);
-        return;
-      }
-
-      // Export current world's atlas (user needs to do each one)
-      setStatus(`Export each world individually using "Export Atlas for World" after selecting tiles.`);
-    }
-
-    function setStatus(msg) {
-      document.getElementById('status').textContent = msg;
-    }
-
-    // World button clicks
-    document.querySelectorAll('.world-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        loadWorld(parseInt(btn.dataset.world));
+      // Update UI
+      document.querySelectorAll('.atlas-tile').forEach(t => {
+        t.classList.toggle('active', parseInt(t.dataset.col) === col && parseInt(t.dataset.row) === row);
       });
-    });
+      document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
 
-    // Keyboard controls for nudging and resizing selections
-    document.addEventListener('keydown', (e) => {
-      if (!currentMode || !spriteImage) return;
-      const sel = worldSelections[currentWorld][currentMode];
-      if (!sel) return;
+      document.getElementById('infoAtlas').textContent = `(${col}, ${row})`;
+      document.getElementById('infoFunc').textContent = selectedTile.func;
+      document.getElementById('infoCol').textContent = FUNC_COLLISION[selectedTile.func] ? '✅ Yes' : '❌ No';
 
-      const step = parseInt(document.getElementById('nudgeStep').value) || 1;
-      let handled = true;
-
-      if (e.shiftKey) {
-        // Shift + Arrow = resize selection
-        switch (e.key) {
-          case 'ArrowRight': sel.w = Math.min(sel.w + step, spriteImage.width - sel.x); break;
-          case 'ArrowLeft': sel.w = Math.max(step, sel.w - step); break;
-          case 'ArrowDown': sel.h = Math.min(sel.h + step, spriteImage.height - sel.y); break;
-          case 'ArrowUp': sel.h = Math.max(step, sel.h - step); break;
-          default: handled = false;
-        }
-      } else {
-        // Arrow = nudge position
-        switch (e.key) {
-          case 'ArrowRight': sel.x = Math.min(sel.x + step, spriteImage.width - sel.w); break;
-          case 'ArrowLeft': sel.x = Math.max(0, sel.x - step); break;
-          case 'ArrowDown': sel.y = Math.min(sel.y + step, spriteImage.height - sel.h); break;
-          case 'ArrowUp': sel.y = Math.max(0, sel.y - step); break;
-          default: handled = false;
-        }
-      }
-
-      if (handled) {
-        e.preventDefault();
-        redraw();
-        updatePreviews();
-        updatePosReadout();
-      }
-    });
-
-    function updatePosReadout() {
-      if (!currentMode) {
-        document.getElementById('posReadout').textContent = 'No selection mode — click Wall or Floor first';
-        return;
-      }
-      const sel = worldSelections[currentWorld][currentMode];
-      if (!sel) {
-        document.getElementById('posReadout').textContent = `${currentMode.toUpperCase()}: not set — click on sprite sheet`;
-        return;
-      }
-      const label = currentMode === 'wall' ? '🧱 WALL' : '🟫 FLOOR';
-      document.getElementById('posReadout').textContent =
-        `${label}  x:${sel.x}  y:${sel.y}  w:${sel.w}  h:${sel.h}  |  Arrow=move  Shift+Arrow=resize`;
+      setStatus(`Selected tile (${col},${row}) — ${selectedTile.func}`);
     }
 
-    // Initial load
-    loadWorld(0);
+    function updateTileFunction() {
+      if (selectedTile) {
+        selectedTile.func = document.getElementById('funcSelect').value;
+        document.getElementById('infoFunc').textContent = selectedTile.func;
+        document.getElementById('infoCol').textContent = FUNC_COLLISION[selectedTile.func] ? '✅ Yes' : '❌ No';
+      }
+    }
+
+    function selectSpecial(type) {
+      selectedSpecial = type;
+      selectedTile = null;
+      isEraser = false;
+      document.querySelectorAll('.atlas-tile').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`[data-tile="spawn_${type}"]`).classList.add('active');
+      setStatus(`Selected: ${type} marker`);
+    }
+
+    function selectEraser() {
+      isEraser = true;
+      selectedTile = null;
+      selectedSpecial = null;
+      document.querySelectorAll('.atlas-tile').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('[data-tile="eraser"]').classList.add('active');
+      setStatus('Eraser selected');
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    function initMap() {
+      tiles = [];
+      for (let y = 0; y < mapHeight; y++) {
+        tiles[y] = [];
+        for (let x = 0; x < mapWidth; x++) {
+          if (x === 0 || y === 0 || x === mapWidth - 1 || y === mapHeight - 1) {
+            tiles[y][x] = { col: 0, row: 0, func: 'solid' }; // Wall border
+          } else {
+            tiles[y][x] = { col: 1, row: 0, func: 'floor' }; // Floor interior
+          }
+        }
+      }
+      playerStart = { x: 2, y: 2 };
+      exitPortal = { x: mapWidth - 3, y: mapHeight - 3 };
+      enemySpawns = [];
+      undoStack = []; redoStack = [];
+      resizeCanvas();
+      render();
+    }
+
+    function resizeMap() {
+      const [w, h] = document.getElementById('mapSize').value.split(',').map(Number);
+      mapWidth = w; mapHeight = h;
+      initMap();
+      setStatus(`Map resized to ${w}×${h}`);
+    }
+
+    function resizeCanvas() {
+      canvas.width = mapWidth * CELL;
+      canvas.height = mapHeight * CELL;
+      miniCanvas.width = mapWidth;
+      miniCanvas.height = mapHeight;
+    }
+
+    // ============================================================
+    // RENDER
+    // ============================================================
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+          const t = tiles[y][x];
+          if (t && atlasImage) {
+            // Draw actual tile from atlas
+            ctx.drawImage(atlasImage, t.col * TILE_PX, t.row * TILE_PX, TILE_PX, TILE_PX,
+              x * CELL, y * CELL, CELL, CELL);
+          } else if (t) {
+            // Fallback color
+            ctx.fillStyle = FUNC_COLORS[t.func] || '#333';
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+          } else {
+            // Void
+            ctx.fillStyle = '#0a0a15';
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+          }
+
+          // Grid lines
+          ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(x * CELL, y * CELL, CELL, CELL);
+        }
+      }
+
+      // Markers
+      function drawMarker(pos, emoji, color) {
+        if (!pos) return;
+        const cx = pos.x * CELL + CELL / 2, cy = pos.y * CELL + CELL / 2;
+        ctx.beginPath(); ctx.arc(cx, cy, CELL / 3, 0, Math.PI * 2);
+        ctx.fillStyle = color + '60'; ctx.fill();
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.font = `${CELL * 0.5}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(emoji, cx, cy);
+      }
+      enemySpawns.forEach(s => drawMarker(s, '👹', '#cc2222'));
+      drawMarker(playerStart, '🟢', '#00cc44');
+      drawMarker(exitPortal, '🌀', '#4488ff');
+
+      renderMinimap();
+      updateStats();
+    }
+
+    function renderMinimap() {
+      const imgData = miniCtx.createImageData(mapWidth, mapHeight);
+      for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+          const t = tiles[y][x];
+          let r = 10, g = 10, b = 21;
+          if (t) {
+            const hex = FUNC_COLORS[t.func] || '#333';
+            r = parseInt(hex.slice(1, 3), 16);
+            g = parseInt(hex.slice(3, 5), 16);
+            b = parseInt(hex.slice(5, 7), 16);
+          }
+          const i = (y * mapWidth + x) * 4;
+          imgData.data[i] = r; imgData.data[i + 1] = g; imgData.data[i + 2] = b; imgData.data[i + 3] = 255;
+        }
+      }
+      miniCtx.putImageData(imgData, 0, 0);
+      if (playerStart) { miniCtx.fillStyle = '#00ff44'; miniCtx.fillRect(playerStart.x, playerStart.y, 1, 1); }
+      if (exitPortal) { miniCtx.fillStyle = '#4488ff'; miniCtx.fillRect(exitPortal.x, exitPortal.y, 1, 1); }
+      enemySpawns.forEach(s => { miniCtx.fillStyle = '#ff2222'; miniCtx.fillRect(s.x, s.y, 1, 1); });
+    }
+
+    function updateStats() {
+      let placed = 0;
+      for (let y = 0; y < mapHeight; y++) for (let x = 0; x < mapWidth; x++) if (tiles[y][x]) placed++;
+      document.getElementById('statsSize').textContent = `${mapWidth}×${mapHeight}`;
+      document.getElementById('statsTiles').textContent = placed;
+      document.getElementById('statsStart').textContent = playerStart ? `(${playerStart.x},${playerStart.y})` : '❌';
+      document.getElementById('statsExit').textContent = exitPortal ? `(${exitPortal.x},${exitPortal.y})` : '❌';
+      document.getElementById('statsEnemies').textContent = enemySpawns.length;
+    }
+
+    // ============================================================
+    // TOOLS & PAINTING
+    // ============================================================
+    function setTool(tool) {
+      currentTool = tool;
+      document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+    }
+
+    function saveState() {
+      undoStack.push({
+        tiles: tiles.map(r => r.map(t => t ? { ...t } : null)),
+        playerStart: playerStart ? { ...playerStart } : null,
+        exitPortal: exitPortal ? { ...exitPortal } : null,
+        enemySpawns: enemySpawns.map(s => ({ ...s })),
+      });
+      if (undoStack.length > 50) undoStack.shift();
+      redoStack = [];
+    }
+
+    function undo() {
+      if (!undoStack.length) return;
+      redoStack.push({ tiles: tiles.map(r => r.map(t => t ? { ...t } : null)), playerStart: playerStart ? { ...playerStart } : null, exitPortal: exitPortal ? { ...exitPortal } : null, enemySpawns: enemySpawns.map(s => ({ ...s })) });
+      const s = undoStack.pop();
+      tiles = s.tiles; playerStart = s.playerStart; exitPortal = s.exitPortal; enemySpawns = s.enemySpawns;
+      render();
+    }
+
+    function redo() {
+      if (!redoStack.length) return;
+      undoStack.push({ tiles: tiles.map(r => r.map(t => t ? { ...t } : null)), playerStart: playerStart ? { ...playerStart } : null, exitPortal: exitPortal ? { ...exitPortal } : null, enemySpawns: enemySpawns.map(s => ({ ...s })) });
+      const s = redoStack.pop();
+      tiles = s.tiles; playerStart = s.playerStart; exitPortal = s.exitPortal; enemySpawns = s.enemySpawns;
+      render();
+    }
+
+    function getGridPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: Math.max(0, Math.min(Math.floor((e.clientX - rect.left) / CELL), mapWidth - 1)),
+        y: Math.max(0, Math.min(Math.floor((e.clientY - rect.top) / CELL), mapHeight - 1))
+      };
+    }
+
+    function placeTile(x, y) {
+      if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) return;
+
+      if (selectedSpecial === 'start') {
+        playerStart = { x, y }; render(); return;
+      }
+      if (selectedSpecial === 'exit') {
+        exitPortal = { x, y }; render(); return;
+      }
+      if (selectedSpecial === 'enemy') {
+        const idx = enemySpawns.findIndex(s => s.x === x && s.y === y);
+        if (idx >= 0) enemySpawns.splice(idx, 1);
+        else enemySpawns.push({ x, y });
+        render(); return;
+      }
+
+      if (isEraser) {
+        tiles[y][x] = null;
+        if (playerStart && playerStart.x === x && playerStart.y === y) playerStart = null;
+        if (exitPortal && exitPortal.x === x && exitPortal.y === y) exitPortal = null;
+        enemySpawns = enemySpawns.filter(s => !(s.x === x && s.y === y));
+        return;
+      }
+
+      if (selectedTile) {
+        tiles[y][x] = { ...selectedTile };
+      }
+    }
+
+    function floodFill(sx, sy) {
+      if (!selectedTile || isEraser) return;
+      const old = tiles[sy][sx];
+      const oldKey = old ? `${old.col},${old.row}` : 'null';
+      const newKey = `${selectedTile.col},${selectedTile.row}`;
+      if (oldKey === newKey) return;
+
+      const stack = [[sx, sy]];
+      const visited = new Set();
+      while (stack.length) {
+        const [x, y] = stack.pop();
+        const key = `${x},${y}`;
+        if (visited.has(key) || x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) continue;
+        const cur = tiles[y][x];
+        const curKey = cur ? `${cur.col},${cur.row}` : 'null';
+        if (curKey !== oldKey) continue;
+        visited.add(key);
+        tiles[y][x] = { ...selectedTile };
+        stack.push([x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]);
+      }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const pos = getGridPos(e);
+      saveState();
+      isDrawing = true;
+
+      if (currentTool === 'paint') { placeTile(pos.x, pos.y); render(); }
+      else if (currentTool === 'fill') { floodFill(pos.x, pos.y); render(); isDrawing = false; }
+      else if (currentTool === 'rect') { rectStart = pos; }
+      else if (currentTool === 'pick') {
+        const t = tiles[pos.y][pos.x];
+        if (t) selectAtlasTile(t.col, t.row);
+        isDrawing = false;
+      }
+      setStatus(`(${pos.x}, ${pos.y})`);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const pos = getGridPos(e);
+      if (isDrawing && currentTool === 'paint') { placeTile(pos.x, pos.y); render(); }
+      const t = tiles[pos.y]?.[pos.x];
+      setStatus(`(${pos.x}, ${pos.y}) — ${t ? `tile(${t.col},${t.row}) ${t.func}` : 'void'}`);
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (isDrawing && currentTool === 'rect' && rectStart && selectedTile) {
+        const pos = getGridPos(e);
+        const x1 = Math.min(rectStart.x, pos.x), y1 = Math.min(rectStart.y, pos.y);
+        const x2 = Math.max(rectStart.x, pos.x), y2 = Math.max(rectStart.y, pos.y);
+        for (let y = y1; y <= y2; y++)
+          for (let x = x1; x <= x2; x++)
+            tiles[y][x] = isEraser ? null : { ...selectedTile };
+        render();
+      }
+      isDrawing = false; rectStart = null;
+    });
+
+    canvas.addEventListener('mouseleave', () => { isDrawing = false; rectStart = null; });
+
+    // ============================================================
+    // KEYBOARD
+    // ============================================================
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); return; }
+      if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); return; }
+      if (e.key === '0') selectEraser();
+      if (e.key === 'b') setTool('paint');
+      if (e.key === 'f') setTool('fill');
+      if (e.key === 'r') setTool('rect');
+      if (e.key === 'i') setTool('pick');
+    });
+
+    // ============================================================
+    // SAVE / LOAD
+    // ============================================================
+    async function saveMap() {
+      if (!playerStart) { setStatus('❌ Place a Player Start!'); return; }
+      if (!exitPortal) { setStatus('❌ Place an Exit Portal!'); return; }
+
+      const worldId = parseInt(document.getElementById('worldId').value);
+      const name = document.getElementById('mapName').value;
+      const filename = `world_${worldId}_level_1.json`;
+
+      // Convert tiles to compact format: each cell is [col, row, funcIndex] or null (0)
+      const FUNC_MAP = { solid: 0, floor: 1, hazard: 2, interactive: 3, light: 4, decorative: 5 };
+      const tilesData = tiles.map(row => row.map(t => t ? [t.col, t.row, FUNC_MAP[t.func] || 1] : 0));
+
+      const mapData = {
+        version: 2,
+        filename, name, world_id: worldId,
+        width: mapWidth, height: mapHeight,
+        player_start: [playerStart.x, playerStart.y],
+        exit_portal: [exitPortal.x, exitPortal.y],
+        enemy_spawns: enemySpawns.map(s => [s.x, s.y]),
+        tiles: tilesData,
+      };
+
+      try {
+        const resp = await fetch('/save-map', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(mapData),
+        });
+        const result = await resp.json();
+        if (result.success) setStatus(`✅ Saved ${filename}`);
+        else setStatus(`❌ Save failed: ${result.error}`);
+      } catch (err) { setStatus(`❌ Server error: ${err.message}`); }
+    }
+
+    async function showLoadModal() {
+      try {
+        const resp = await fetch('/list-maps');
+        const maps = await resp.json();
+        const list = document.getElementById('mapList');
+        list.innerHTML = maps.length === 0
+          ? '<li style="color:#666">No saved maps</li>'
+          : '';
+        maps.forEach(m => {
+          const li = document.createElement('li');
+          li.textContent = `${m.name || m.filename} (${m.width}×${m.height}) — World ${m.world_id}`;
+          li.onclick = () => loadMap(m.filename);
+          list.appendChild(li);
+        });
+        document.getElementById('loadModal').classList.add('show');
+      } catch (err) { setStatus(`❌ ${err.message}`); }
+    }
+
+    function hideLoadModal() { document.getElementById('loadModal').classList.remove('show'); }
+
+    async function loadMap(filename) {
+      hideLoadModal();
+      try {
+        const resp = await fetch(`/load-map?file=${filename}`);
+        const data = await resp.json();
+
+        mapWidth = data.width; mapHeight = data.height;
+        const FUNC_NAMES = ['solid', 'floor', 'hazard', 'interactive', 'light', 'decorative'];
+
+        // Parse tiles — support v1 (integer IDs) and v2 ([col,row,func])
+        tiles = data.tiles.map(row => row.map(t => {
+          if (t === 0 || t === null) return null;
+          if (Array.isArray(t)) return { col: t[0], row: t[1], func: FUNC_NAMES[t[2]] || 'floor' };
+          // V1 format: integer tile IDs
+          if (typeof t === 'number') {
+            const isSolid = [1, 8, 9, 10, 11, 12, 13, 16, 17].includes(t);
+            return { col: isSolid ? 0 : 1, row: 0, func: isSolid ? 'solid' : 'floor' };
+          }
+          return null;
+        }));
+
+        playerStart = data.player_start ? { x: data.player_start[0], y: data.player_start[1] } : null;
+        exitPortal = data.exit_portal ? { x: data.exit_portal[0], y: data.exit_portal[1] } : null;
+        enemySpawns = (data.enemy_spawns || []).map(s => ({ x: s[0], y: s[1] }));
+
+        document.getElementById('mapName').value = data.name || '';
+        document.getElementById('worldId').value = data.world_id || 0;
+
+        undoStack = []; redoStack = [];
+        resizeCanvas();
+        await loadWorldAtlas();
+        render();
+        setStatus(`✅ Loaded ${filename}`);
+      } catch (err) { setStatus(`❌ Load failed: ${err.message}`); }
+    }
+
+    function setStatus(msg) { document.getElementById('statusBar').textContent = msg; }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    initMap();
+    loadWorldAtlas();
   </script>
 </body>
 

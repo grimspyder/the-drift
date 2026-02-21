@@ -3,6 +3,9 @@ extends Node2D
 ## Level scene for The Drift
 ## Uses DungeonGenerator for procedural level generation with theme support
 
+## Preload MapLoader script (class_name may not be available without .uid)
+const MapLoaderScript = preload("res://src/Map/MapLoader.gd")
+
 ## DungeonGenerator reference
 @onready var dungeon_generator: Node2D = $DungeonGenerator
 
@@ -52,26 +55,95 @@ func generate_level(new_seed: int = 0) -> void:
 	"""Generate a new level with optional seed"""
 	_level_seed = new_seed
 	if _level_seed == 0:
-		_level_seed = randi() # Random seed if none provided
+		_level_seed = randi()
 	
 	print("Level: Generating with seed ", _level_seed)
 	
 	# Get theme for world 0 (starting world)
 	_current_theme = _theme_db.get_theme_for_world_id(0)
 	
-	# Apply theme-specific settings to dungeon generator
-	dungeon_generator.apply_theme_settings(_current_theme)
-	
-	# Load custom tileset BEFORE dungeon generation (so tiles are placed correctly)
-	_apply_theme_to_tilemap()
-	
-	# Delegate to DungeonGenerator
-	dungeon_generator.generate_dungeon(_level_seed)
-	
-	# Place portal (in ALL levels - allows player to advance)
-	_place_portal(0)
+	# Try custom map first, then fall back to procedural
+	var map_data = MapLoaderScript.load_map(0)
+	if not map_data.is_empty():
+		# Custom map: build a fresh tileset from code and apply
+		_setup_custom_map_tileset()
+		_apply_custom_map(map_data, 0)
+	else:
+		# Procedural: apply theme tileset then generate
+		_apply_theme_to_tilemap()
+		dungeon_generator.apply_theme_settings(_current_theme)
+		dungeon_generator.generate_dungeon(_level_seed)
+		_place_portal(0)
 	
 	print("Level: Generation complete")
+
+
+func _setup_custom_map_tileset() -> void:
+	"""Create a TileSet for custom maps using the world atlas PNG."""
+	var atlas_tex: ImageTexture = null
+	
+	# Try to load the world atlas PNG
+	if _current_theme:
+		var atlas_path = "res://assets/tilesets/world_%d_atlas.png" % _current_theme.theme_id
+		var abs_path = ProjectSettings.globalize_path(atlas_path)
+		var image = Image.load_from_file(abs_path)
+		if image:
+			image.convert(Image.FORMAT_RGBA8)
+			atlas_tex = ImageTexture.create_from_image(image)
+			print("Level: Loaded world atlas: ", abs_path, " (", image.get_width(), "x", image.get_height(), ")")
+	
+	# Fallback: try basic_tiles.png
+	if not atlas_tex:
+		var fallback_path = ProjectSettings.globalize_path("res://assets/tilesets/basic_tiles.png")
+		var image = Image.load_from_file(fallback_path)
+		if image:
+			image.convert(Image.FORMAT_RGBA8)
+			atlas_tex = ImageTexture.create_from_image(image)
+			print("Level: Using fallback basic_tiles.png")
+	
+	# Last resort: generate programmatic tiles
+	if not atlas_tex:
+		var atlas_img = Image.create(64, 32, false, Image.FORMAT_RGBA8)
+		for y in range(32):
+			for x in range(32):
+				atlas_img.set_pixel(x, y, Color(0.16, 0.16, 0.21))
+				atlas_img.set_pixel(32 + x, y, Color(0.54, 0.48, 0.38))
+		atlas_tex = ImageTexture.create_from_image(atlas_img)
+		print("Level: Using programmatic fallback tiles")
+	
+	# Build TileSet
+	var tileset = TileSet.new()
+	tileset.tile_size = Vector2i(32, 32)
+	tileset.add_physics_layer()
+	tileset.set_physics_layer_collision_layer(0, 2)
+	tileset.set_physics_layer_collision_mask(0, 0)
+	
+	var source = TileSetAtlasSource.new()
+	source.texture = atlas_tex
+	source.texture_region_size = Vector2i(32, 32)
+	
+	var cols = atlas_tex.get_width() / 32
+	var rows = atlas_tex.get_height() / 32
+	for row in range(rows):
+		for col in range(cols):
+			source.create_tile(Vector2i(col, row))
+	
+	tileset.add_source(source)
+	
+	# Wall collision (row 0 = walls)
+	for col in range(cols):
+		var wall_data = source.get_tile_data(Vector2i(col, 0), 0)
+		if wall_data:
+			wall_data.set_collision_polygons_count(0, 1)
+			wall_data.set_collision_polygon_points(0, 0, PackedVector2Array([
+				Vector2(-16, -16), Vector2(16, -16),
+				Vector2(16, 16), Vector2(-16, 16)
+			]))
+	
+	tile_map.tile_set = tileset
+	tile_map.clear()
+	tile_map.modulate = Color.WHITE
+	print("Level: Custom map tileset ready (", cols, "x", rows, " tiles)")
 
 
 func regenerate_level() -> void:
@@ -81,30 +153,26 @@ func regenerate_level() -> void:
 
 func regenerate_level_with_seed(new_seed: int) -> void:
 	"""Regenerate the level with a new seed (used during drift)"""
-	# Play transition effect
 	_play_drift_transition()
 	
-	# Generate new level
 	_level_seed = new_seed
 	
-	# Get world_id from GameManager (access as property, not has())
 	var game_manager = get_node_or_null("/root/GameManager")
 	var world_id = 0
 	if game_manager and "world_id" in game_manager:
 		world_id = game_manager.world_id
 	
 	_current_theme = _theme_db.get_theme_for_world_id(world_id)
-	
-	# Apply theme-specific settings to dungeon generator
-	dungeon_generator.apply_theme_settings(_current_theme)
-	
-	# Load custom tileset BEFORE dungeon generation (so tiles are placed correctly)
 	_apply_theme_to_tilemap()
 	
-	dungeon_generator.generate_dungeon(_level_seed)
-	
-	# Place portal in ALL levels
-	_place_portal(world_id)
+	# Try custom map first, then fall back to procedural
+	var map_data = MapLoaderScript.load_map(world_id)
+	if not map_data.is_empty():
+		_apply_custom_map(map_data, world_id)
+	else:
+		dungeon_generator.apply_theme_settings(_current_theme)
+		dungeon_generator.generate_dungeon(_level_seed)
+		_place_portal(world_id)
 	
 	print("Level: Regenerated with seed ", _level_seed, " and theme ", _current_theme.display_name)
 
@@ -127,6 +195,58 @@ func apply_theme(theme: WorldTheme) -> void:
 	_apply_theme_to_tilemap()
 	
 	print("Level: Applied theme: ", theme.display_name)
+
+
+func _apply_custom_map(map_data: Dictionary, world_id: int) -> void:
+	"""Apply a hand-crafted map from the Map Editor"""
+	print("Level: Loading custom map for world ", world_id)
+	
+	# Debug: print TileSet info before applying
+	print("Level: TileMap tileset has ", tile_map.tile_set.get_source_count(), " sources")
+	var source = tile_map.tile_set.get_source(tile_map.tile_set.get_source_id(0)) as TileSetAtlasSource
+	if source:
+		print("Level: Source texture: ", source.texture, " size: ", source.texture.get_width(), "x", source.texture.get_height())
+	
+	# Apply tiles to the TileMap
+	MapLoaderScript.apply_map(map_data, tile_map)
+	tile_map.modulate = Color.WHITE
+	tile_map.z_index = 0
+	
+	# Debug: verify tiles were placed
+	var used = tile_map.get_used_cells(0)
+	print("Level: TileMap now has ", used.size(), " cells on layer 0")
+	
+	# Set player spawn from map data
+	var spawn_pos = MapLoaderScript.get_player_start(map_data)
+	dungeon_generator._player_spawn_point = spawn_pos
+	print("Level: Custom map player start at ", spawn_pos)
+	
+	# Place exit portal directly from map data (don't use DungeonGenerator for this)
+	var exit_pos = MapLoaderScript.get_exit_position(map_data)
+	_spawn_exit_at(exit_pos, world_id)
+	
+	print("Level: Custom map loaded — ", map_data.get("width", 0), "x", map_data.get("height", 0))
+
+
+func _spawn_exit_at(position: Vector2, world_id: int) -> void:
+	"""Spawn exit stairs directly at a position (for custom maps)"""
+	var stairs_scene = load("res://src/Map/ExitStairs.tscn")
+	if stairs_scene:
+		var stairs = stairs_scene.instantiate()
+		stairs.global_position = position
+		add_child(stairs)
+		
+		if stairs.has_method("set_world_id"):
+			stairs.set_world_id(world_id)
+		
+		# Register with GameManager
+		var game_manager = get_node_or_null("/root/GameManager")
+		if game_manager and game_manager.has_method("register_exit_stairs"):
+			game_manager.register_exit_stairs(stairs)
+		
+		print("Level: Exit portal spawned at ", position, " for world ", world_id)
+	else:
+		push_error("Level: Failed to load ExitStairs scene!")
 
 
 func _apply_theme_to_tilemap() -> void:
@@ -207,7 +327,9 @@ func _build_tileset_from_spritesheet(texture_path: String) -> TileSet:
 
 
 func _create_tileset_from_texture(texture: Texture2D) -> TileSet:
-	"""Create a TileSet from a 64x32 atlas texture: wall=(0,0), floor=(1,0)."""
+	"""Create a TileSet from an atlas texture. Supports both formats:
+	- Old: 64x32 (2 tiles: wall at 0,0 / floor at 1,0)
+	- New: 192x128 (6x4 grid: row0=walls, row1=floors, row2=corridors, row3=specials)"""
 	var tileset = TileSet.new()
 	tileset.tile_size = Vector2i(32, 32)
 	tileset.add_physics_layer()
@@ -218,20 +340,32 @@ func _create_tileset_from_texture(texture: Texture2D) -> TileSet:
 	source.texture = texture
 	source.texture_region_size = Vector2i(32, 32)
 
-	source.create_tile(Vector2i(0, 0)) # Wall
-	source.create_tile(Vector2i(1, 0)) # Floor
+	var tex_w = texture.get_width()
+	var tex_h = texture.get_height()
+	var cols = tex_w / 32
+	var rows = tex_h / 32
+	print("Level: Atlas is ", tex_w, "x", tex_h, " = ", cols, " cols x ", rows, " rows")
+
+	# Create tiles for every valid position in the atlas
+	for row in range(rows):
+		for col in range(cols):
+			var coord = Vector2i(col, row)
+			source.create_tile(coord)
 
 	var source_id = tileset.add_source(source)
 
-	# Wall collision
-	var wall_data: TileData = source.get_tile_data(Vector2i(0, 0), 0)
-	wall_data.set_collision_polygons_count(0, 1)
-	wall_data.set_collision_polygon_points(0, 0, PackedVector2Array([
-		Vector2(-16, -16), Vector2(16, -16),
-		Vector2(16, 16), Vector2(-16, 16)
-	]))
+	# Set collision on all wall tiles (row 0 - walls)
+	# Only set collision for walls, NOT for floors/corridors (player can walk there)
+	for col in range(cols):
+		var wall_data: TileData = source.get_tile_data(Vector2i(col, 0), 0)
+		if wall_data:
+			wall_data.set_collision_polygons_count(0, 1)
+			wall_data.set_collision_polygon_points(0, 0, PackedVector2Array([
+				Vector2(-16, -16), Vector2(16, -16),
+				Vector2(16, 16), Vector2(-16, 16)
+			]))
 
-	print("Level: Built TileSet — source_id=", source_id)
+	print("Level: Built TileSet — ", cols * rows, " tiles, source_id=", source_id)
 	return tileset
 
 

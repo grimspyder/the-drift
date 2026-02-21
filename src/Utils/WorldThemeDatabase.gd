@@ -16,7 +16,7 @@ func _ready() -> void:
 
 
 func _register_all_themes() -> void:
-	# Theme 0: Prime (default)
+	# Theme 0: Prime (default) - Balanced dungeon
 	var prime = WorldTheme.new()
 	prime.theme_id = 0
 	prime.display_name = "Prime World"
@@ -29,10 +29,16 @@ func _register_all_themes() -> void:
 	prime.enemy_health_mod = 1.0
 	prime.enemy_damage_mod = 1.0
 	prime.resource_spawn_mod = 1.0
+	# Map settings - TIGHT for better gameplay
+	prime.map_width = 35
+	prime.map_height = 22
+	prime.min_room_size = 4
+	prime.max_room_size = 7
+	prime.target_room_count = 7
 	prime.tile_set_path = "res://assets/tilesets/world_0.tres"
 	register_theme(prime)
 	
-	# Theme 1: Verdant (green, nature)
+	# Theme 1: Verdant (green, nature) - Lush overgrown
 	var verdant = WorldTheme.new()
 	verdant.theme_id = 1
 	verdant.display_name = "Verdant Realm"
@@ -51,10 +57,16 @@ func _register_all_themes() -> void:
 	verdant.hazards = ["spores", "thorns"]
 	verdant.visual_overlay = "sparkles"
 	verdant.is_easy_mode = true
+	# Map settings - Slightly larger, nature feel
+	verdant.map_width = 38
+	verdant.map_height = 24
+	verdant.min_room_size = 5
+	verdant.max_room_size = 8
+	verdant.target_room_count = 8
 	verdant.tile_set_path = "res://assets/tilesets/world_1.tres"
 	register_theme(verdant)
 	
-	# Theme 2: Arid (yellow, desert)
+	# Theme 2: Arid (yellow, desert) - Open ruins
 	var arid = WorldTheme.new()
 	arid.theme_id = 2
 	arid.display_name = "Arid Wastes"
@@ -73,10 +85,16 @@ func _register_all_themes() -> void:
 	arid.hazards = ["heat", "sandstorms"]
 	arid.visual_overlay = "heat_haze"
 	arid.is_hard_mode = true
+	# Map settings - Wider, more spread out
+	arid.map_width = 42
+	arid.map_height = 26
+	arid.min_room_size = 5
+	arid.max_room_size = 9
+	arid.target_room_count = 8
 	arid.tile_set_path = "res://assets/tilesets/world_2.tres"
 	register_theme(arid)
 	
-	# Theme 3: Crystalline (blue, magic)
+	# Theme 3: Crystalline (blue, magic) - Confined caves
 	var crystalline = WorldTheme.new()
 	crystalline.theme_id = 3
 	crystalline.display_name = "Crystalline Void"
@@ -95,10 +113,16 @@ func _register_all_themes() -> void:
 	crystalline.hazards = ["arcane_surge", "gravity_wells"]
 	crystalline.visual_overlay = "magic_particles"
 	crystalline.is_hard_mode = true
+	# Map settings - Tight, crystalline caves
+	crystalline.map_width = 32
+	crystalline.map_height = 20
+	crystalline.min_room_size = 4
+	crystalline.max_room_size = 6
+	crystalline.target_room_count = 6
 	crystalline.tile_set_path = "res://assets/tilesets/world_3.tres"
 	register_theme(crystalline)
 	
-	# Theme 4: Ashen (red/black, fire)
+	# Theme 4: Ashen (red/black, fire) - Chaotic
 	var ashen = WorldTheme.new()
 	ashen.theme_id = 4
 	ashen.display_name = "Ashen Realm"
@@ -117,10 +141,16 @@ func _register_all_themes() -> void:
 	ashen.hazards = ["fire", "ember_storm"]
 	ashen.visual_overlay = "embers"
 	ashen.is_hard_mode = true
+	# Map settings - Irregular, burned feel
+	ashen.map_width = 36
+	ashen.map_height = 23
+	ashen.min_room_size = 4
+	ashen.max_room_size = 7
+	ashen.target_room_count = 7
 	ashen.tile_set_path = "res://assets/tilesets/world_4.tres"
 	register_theme(ashen)
 	
-	# Theme 5: Shadow Realm (purple/black, dark)
+	# Theme 5: Shadow Realm (purple/black, dark) - Claustrophobic
 	var shadow = WorldTheme.new()
 	shadow.theme_id = 5
 	shadow.display_name = "Shadow Realm"
@@ -139,12 +169,12 @@ func _register_all_themes() -> void:
 	shadow.hazards = ["darkness", "void_portals"]
 	shadow.visual_overlay = "shadow_mist"
 	shadow.is_hard_mode = true
-	# Map settings for this world
-	shadow.map_width = 60 # Smaller map = more claustrophobic
-	shadow.map_height = 35
-	shadow.min_room_size = 4
-	shadow.max_room_size = 7
-	shadow.target_room_count = 20
+	# Map settings - SMALLEST = most claustrophobic
+	shadow.map_width = 30
+	shadow.map_height = 18
+	shadow.min_room_size = 3
+	shadow.max_room_size = 5
+	shadow.target_room_count = 5
 	shadow.tile_set_path = "res://assets/tilesets/world_5.tres"
 	register_theme(shadow)
 	

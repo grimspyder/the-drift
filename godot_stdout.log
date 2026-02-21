@@ -1,0 +1,109 @@
+Godot Engine v4.6.stable.official.89cea1439 - https://godotengine.org
+OpenGL API 3.3.0 NVIDIA 591.86 - Compatibility - Using Device: NVIDIA - NVIDIA GeForce RTX 3090
+
+GameManager: Initialized
+GameManager: Max drifts: 10
+WorldThemeDatabase: Registered 6 world themes
+GameManager: Session seed: 52428144
+DungeonGenerator ready. Map size: 80x45
+EnemySpawner: Current theme ID: 0
+WorldThemeDatabase: Registered 6 world themes
+Level: Generating with seed 3763532736
+MapLoader: Looking for custom map at: M:/the-drift/assets/maps/world_0_level_1.json
+MapLoader: ✅ Loaded 'Prime World - Level 1' (25x18)
+Level: Created custom map tileset from code (64x32, 2 tiles)
+Level: Loading custom map for world 0
+Level: TileMap tileset has 1 sources
+Level: Source texture: ():<ImageTexture#-9223372000213334526> size: 64x32
+MapLoader: Applying 25x18 map (18 rows)
+MapLoader: Placed 450 tiles
+Level: TileMap now has 450 cells on layer 0
+Level: Custom map player start at (80.0, 80.0)
+ExitStairs: Created and ready
+ExitStairs: World ID set to 0
+GameManager: Exit stairs registered for world 0
+Level: Exit portal spawned at (720.0, 496.0) for world 0
+Level: Custom map loaded — 25.0x18.0
+Level: Generation complete
+EquipmentDatabase: Registered 0 equipment types
+ClassDatabase: Registered 8 classes
+ClassDatabase: Registered 8 classes
+Player initialized as: Warrior
+Weapon: Wood Sword
+Armor: Wood Plate Armor
+Level found in scene
+HUD: Initialized
+HUD loaded successfully
+Level: Generating with seed 4282535683
+MapLoader: Looking for custom map at: M:/the-drift/assets/maps/world_0_level_1.json
+MapLoader: ✅ Loaded 'Prime World - Level 1' (25x18)
+Level: Created custom map tileset from code (64x32, 2 tiles)
+Level: Loading custom map for world 0
+Level: TileMap tileset has 1 sources
+Level: Source texture: ():<ImageTexture#-9223371997059217867> size: 64x32
+MapLoader: Applying 25x18 map (18 rows)
+MapLoader: Placed 450 tiles
+Level: TileMap now has 450 cells on layer 0
+Level: Custom map player start at (80.0, 80.0)
+ExitStairs: Created and ready
+ExitStairs: World ID set to 0
+GameManager: Exit stairs registered for world 0
+Level: Exit portal spawned at (720.0, 496.0) for world 0
+Level: Custom map loaded — 25.0x18.0
+Level: Generation complete
+GameManager: Level registered
+GameManager: Player registered
+The Drift initialized.
+World: 0
+Session seed: 52428144
+EnemySpawner: Current theme ID: 0
+EnemySpawner: Not enough rooms for enemies (skipping first room)
+GameManager: Player entered portal! Advancing to next world...
+GameManager: Advancing to World 1
+Level: No atlas found at M:/the-drift/assets/tilesets/world_1_atlas.png — will try sprite sheet
+Level: Loaded sprite sheet 1024x1024 from M:/the-drift/assets/tilesets/world_1.png
+Level: Atlas is 64x32 = 2 cols x 1 rows
+Level: Built TileSet — 2 tiles, source_id=0
+Level: Applied custom TileSet for world 1
+MapLoader: Looking for custom map at: M:/the-drift/assets/maps/world_1_level_1.json
+MapLoader: No custom map found — using procedural generation
+DungeonGenerator: Applied theme settings - map: 38x24, rooms: 8 (5-8)
+DungeonGenerator: Generating with seed 3194934051
+Room 1: pos(11,7) size(8x6)
+Room 2: pos(26,1) size(7x7)
+Room 3: pos(19,17) size(8x5)
+Room 4: pos(1,17) size(8x6)
+Room 5: pos(31,12) size(5x7)
+Room 6: pos(1,6) size(5x5)
+Room generation complete: 6 rooms after 1000 attempts
+DungeonGenerator: Player spawn point: (400.0, 272.0)
+DungeonGenerator: Generated 6 rooms
+DungeonGenerator: Placing exit stairs...
+ExitStairs: Created and ready
+GameManager: Exit stairs registered for world 0
+DungeonGenerator: Exit stairs spawned at (1056.0, 480.0)
+DungeonGenerator: Exit stairs placed at room { "room": <RefCounted#-9223371936459913629>, "distance": 597.809326171875, "center_pos": (1056.0, 480.0) }
+ExitStairs: World ID set to 1
+Level: Portal placed at (1056.0, 480.0) for world 1
+Level: Regenerated with seed 3194934051 and theme Verdant Realm
+GameManager: Player respawned at (400.0, 272.0)
+ClassDatabase: Registered 8 classes
+ClassDatabase: Registered 8 classes
+Player mutated!
+Old class: Warrior -> New class: Hunter
+New weapon: Wood Sword
+New armor: Wood Plate Armor
+GameManager: Applying theme: Verdant Realm
+Theme description: A world overrun with lush vegetation and bioluminescent flora.
+Difficulty: EASIER - Recommended for beginners
+Level: No atlas found at M:/the-drift/assets/tilesets/world_1_atlas.png — will try sprite sheet
+Level: Loaded sprite sheet 1024x1024 from M:/the-drift/assets/tilesets/world_1.png
+Level: Atlas is 64x32 = 2 cols x 1 rows
+Level: Built TileSet — 2 tiles, source_id=0
+Level: Applied custom TileSet for world 1
+Level: Applied theme: Verdant Realm
+GameManager: Advanced to world 1
+ExitStairs: Player reached portal in world 0
+ExitStairs: Player reached portal in world 0
+ExitStairs: Trigger effect complete
+ExitStairs: Trigger effect complete

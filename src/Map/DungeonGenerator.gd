@@ -10,15 +10,21 @@ extends Node2D
 ## TileMap reference for placing tiles
 @export var tile_map_path: NodePath
 
-## Dungeon dimensions (in tiles)
-@export var map_width: int = 80
-@export var map_height: int = 45
+## Dungeon dimensions (in tiles) - SMALLER for better gameplay
+@export var map_width: int = 40
+@export var map_height: int = 25
 
-## Room configuration
-@export var min_room_size: int = 6
-@export var max_room_size: int = 10
-@export var target_room_count: int = 30
+## Room configuration - SMALLER rooms for tighter gameplay
+@export var min_room_size: int = 5
+@export var max_room_size: int = 8
+@export var target_room_count: int = 8
 @export var max_attempts: int = 1000
+
+## Corridor width (in tiles) - TIGHT corridors (1 tile wide)
+@export var corridor_width: int = 1
+
+## Room padding — minimum space between rooms
+@export var room_padding: int = 1
 
 ## Seed for reproducible generation
 @export var seed_value: int = 0
@@ -28,6 +34,13 @@ extends Node2D
 
 ## Tile size (32x32 pixels)
 const TILE_SIZE: int = 32
+
+## Tile variation settings
+## Number of tile variations to randomly pick from
+## NOTE: Only using 2 tiles since that's what the current TileSet supports
+const WALL_VARIATIONS: int = 1 # Only 1 wall tile in current set
+const FLOOR_VARIATIONS: int = 1 # Only 1 floor tile in current set
+const CORRIDOR_VARIATIONS: int = 1 # Only 1 corridor tile in current set
 
 # -------------------------------------------------------------------------
 # Internal State
@@ -446,9 +459,9 @@ func _generate_rooms() -> void:
 		var room_width = _rng.randi_range(min_room_size, max_room_size)
 		var room_height = _rng.randi_range(min_room_size, max_room_size)
 		
-		# Random room position (within map bounds, with 1-tile padding)
-		var room_x = _rng.randi_range(1, map_width - room_width - 1)
-		var room_y = _rng.randi_range(1, map_height - room_height - 1)
+		# Random room position (within map bounds, with wall padding)
+		var room_x = _rng.randi_range(room_padding, map_width - room_width - room_padding)
+		var room_y = _rng.randi_range(room_padding, map_height - room_height - room_padding)
 		
 		var new_room = Room.new(Vector2i(room_x, room_y), Vector2i(room_width, room_height))
 		
@@ -464,9 +477,17 @@ func _generate_rooms() -> void:
 
 
 func _check_room_overlap(room: Room) -> bool:
-	"""Check if a room overlaps with any existing rooms"""
+	"""Check if a room overlaps with any existing rooms (with padding for thick walls)"""
+	var padded_room = Room.new(
+		Vector2i(room.position.x - room_padding, room.position.y - room_padding),
+		Vector2i(room.size.x + room_padding * 2, room.size.y + room_padding * 2)
+	)
 	for existing_room in _rooms:
-		if room.intersects(existing_room):
+		var padded_existing = Room.new(
+			Vector2i(existing_room.position.x - room_padding, existing_room.position.y - room_padding),
+			Vector2i(existing_room.size.x + room_padding * 2, existing_room.size.y + room_padding * 2)
+		)
+		if padded_room.intersects(padded_existing):
 			return true
 	return false
 
@@ -507,19 +528,27 @@ func _create_l_tunnel(start: Vector2i, end: Vector2i) -> void:
 
 
 func _carve_h_tunnel(x1: int, x2: int, y: int) -> void:
-	"""Carve a horizontal tunnel"""
+	"""Carve a wide horizontal tunnel"""
 	var start_x = mini(x1, x2)
 	var end_x = maxi(x1, x2)
+	var half_w = corridor_width / 2
 	for x in range(start_x, end_x + 1):
-		_set_floor_tile(x, y)
+		for dy in range(-half_w, half_w + 1):
+			var ty = y + dy
+			if ty > 0 and ty < map_height - 1:
+				_set_floor_tile(x, ty, true) # Use corridor tiles
 
 
 func _carve_v_tunnel(y1: int, y2: int, x: int) -> void:
-	"""Carve a vertical tunnel"""
+	"""Carve a wide vertical tunnel"""
 	var start_y = mini(y1, y2)
 	var end_y = maxi(y1, y2)
+	var half_w = corridor_width / 2
 	for y in range(start_y, end_y + 1):
-		_set_floor_tile(x, y)
+		for dx in range(-half_w, half_w + 1):
+			var tx = x + dx
+			if tx > 0 and tx < map_width - 1:
+				_set_floor_tile(tx, y, true) # Use corridor tiles
 
 
 # -------------------------------------------------------------------------
@@ -534,16 +563,17 @@ func _fill_with_walls() -> void:
 
 
 func _generate_boundary_walls() -> void:
-	"""Generate walls around the dungeon perimeter"""
-	# Top and bottom walls
-	for x in range(map_width):
-		_set_wall_tile(x, 0)
-		_set_wall_tile(x, map_height - 1)
-	
-	# Left and right walls
-	for y in range(map_height):
-		_set_wall_tile(0, y)
-		_set_wall_tile(map_width - 1, y)
+	"""Generate thick walls around the dungeon perimeter"""
+	for thickness in range(2):
+		# Top and bottom walls
+		for x in range(map_width):
+			_set_wall_tile(x, thickness)
+			_set_wall_tile(x, map_height - 1 - thickness)
+		
+		# Left and right walls
+		for y in range(map_height):
+			_set_wall_tile(thickness, y)
+			_set_wall_tile(map_width - 1 - thickness, y)
 
 
 # -------------------------------------------------------------------------
@@ -559,12 +589,15 @@ func _clear_tilemap() -> void:
 func _set_wall_tile(x: int, y: int) -> void:
 	"""Set a wall tile at the specified position"""
 	if _tile_map:
+		# Use tile at atlas coordinates (0, 0) - the wall tile
 		_tile_map.set_cell(0, Vector2i(x, y), 0, Vector2i(0, 0))
 
 
-func _set_floor_tile(x: int, y: int) -> void:
+func _set_floor_tile(x: int, y: int, is_corridor: bool = false) -> void:
 	"""Set a floor tile at the specified position"""
 	if _tile_map:
+		# Use tile at atlas coordinates (1, 0) - the floor tile
+		# (Same tile for both rooms and corridors since we only have 2 tiles)
 		_tile_map.set_cell(0, Vector2i(x, y), 0, Vector2i(1, 0))
 
 
