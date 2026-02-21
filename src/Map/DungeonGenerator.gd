@@ -23,6 +23,9 @@ extends Node2D
 ## Seed for reproducible generation
 @export var seed_value: int = 0
 
+## Auto-generate dungeon on ready (set to false to control generation manually)
+@export var auto_generate: bool = false
+
 ## Tile size (32x32 pixels)
 const TILE_SIZE: int = 32
 
@@ -598,8 +601,9 @@ func _ready() -> void:
 	
 	print("DungeonGenerator ready. Map size: ", map_width, "x", map_height)
 	
-	# Auto-generate dungeon on ready (can be disabled in inspector)
-	generate_dungeon()
+	# Auto-generate dungeon on ready (controlled by flag)
+	if auto_generate:
+		generate_dungeon()
 
 
 func _get_configuration_warnings() -> PackedStringArray:

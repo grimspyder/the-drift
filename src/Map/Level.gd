@@ -62,14 +62,14 @@ func generate_level(new_seed: int = 0) -> void:
 	# Apply theme-specific settings to dungeon generator
 	dungeon_generator.apply_theme_settings(_current_theme)
 	
+	# Load custom tileset BEFORE dungeon generation (so tiles are placed correctly)
+	_apply_theme_to_tilemap()
+	
 	# Delegate to DungeonGenerator
 	dungeon_generator.generate_dungeon(_level_seed)
 	
 	# Place portal (in ALL levels - allows player to advance)
 	_place_portal(0)
-	
-	# Apply theme colors
-	_apply_theme_to_tilemap()
 	
 	print("Level: Generation complete")
 
@@ -98,12 +98,13 @@ func regenerate_level_with_seed(new_seed: int) -> void:
 	# Apply theme-specific settings to dungeon generator
 	dungeon_generator.apply_theme_settings(_current_theme)
 	
+	# Load custom tileset BEFORE dungeon generation (so tiles are placed correctly)
+	_apply_theme_to_tilemap()
+	
 	dungeon_generator.generate_dungeon(_level_seed)
 	
 	# Place portal in ALL levels
 	_place_portal(world_id)
-	
-	_apply_theme_to_tilemap()
 	
 	print("Level: Regenerated with seed ", _level_seed, " and theme ", _current_theme.display_name)
 
@@ -131,17 +132,34 @@ func apply_theme(theme: WorldTheme) -> void:
 func _apply_theme_to_tilemap() -> void:
 	"""Apply theme colors to the TileMap"""
 	if not tile_map or not _current_theme:
+		push_error("Level: Cannot apply theme - tile_map or _current_theme is null!")
 		return
 	
-	# Load custom tileset if provided
-	if "tile_set_path" in _current_theme and _current_theme.tile_set_path != "":
-		var custom_tileset = load(_current_theme.tile_set_path)
-		if custom_tileset is TileSet:
-			tile_map.tile_set = custom_tileset
-			print("Level: Applied custom TileSet ", _current_theme.tile_set_path)
+	# Determine which tileset to use
+	var tileset_path = ""
 	
-	# Apply floor color modulation
+	# First try: get from theme's tile_set_path property (if it exists and is not empty)
+	if _current_theme.has("tile_set_path") and _current_theme.tile_set_path != "":
+		tileset_path = _current_theme.tile_set_path
+	
+	# Second try: construct default path from theme_id
+	if tileset_path == "":
+		tileset_path = "res://assets/tilesets/world_%d.tres" % _current_theme.theme_id
+	
+	# Try to load and apply the tileset
+	print("Level: Attempting to load tileset from: ", tileset_path)
+	var custom_tileset: TileSet = load(tileset_path)
+	if custom_tileset:
+		tile_map.tile_set = custom_tileset
+		# Clear existing tiles and re-apply with new tileset
+		tile_map.clear()
+		print("Level: Successfully applied custom TileSet: ", tileset_path)
+	else:
+		print("Level: WARNING - Failed to load tileset from: ", tileset_path)
+	
+	# Always apply floor color modulation
 	tile_map.modulate = _current_theme.floor_color
+	print("Level: Applied floor color modulation: ", _current_theme.floor_color)
 
 
 func get_player_spawn_position() -> Vector2:

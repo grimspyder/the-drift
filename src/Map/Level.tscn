@@ -17,6 +17,7 @@ min_room_size = 6
 max_room_size = 10
 target_room_count = 30
 seed_value = 0
+auto_generate = false
 
 [node name="TileMap" type="TileMap" parent="."]
 tile_set = ExtResource("2_tileset")
