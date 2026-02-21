@@ -134,7 +134,7 @@ func _apply_theme_to_tilemap() -> void:
 		push_error("Level: Cannot apply theme - tile_map or _current_theme is null!")
 		return
 
-	var png_path = "res://assets/tilesets/world_%d.jpg" % _current_theme.theme_id
+	var png_path = "res://assets/tilesets/world_%d.png" % _current_theme.theme_id
 	var custom_tileset = _build_tileset_from_texture(png_path)
 	if custom_tileset:
 		tile_map.tile_set = custom_tileset
@@ -163,20 +163,20 @@ func _build_tileset_from_texture(texture_path: String) -> TileSet:
 	# Convert to RGBA8 so all image operations use the same format
 	image.convert(Image.FORMAT_RGBA8)
 	
-	# The generated sheets are NxN grids (e.g. 640x640 with 4 columns)
-	# Row 0 = floor variations, Row 1 = wall variations
-	var cols = 4
-	var rows = 4
-	var src_tile_w = img_w / cols
-	var src_tile_h = img_h / rows
-	print("Level: Source tile size: ", src_tile_w, "x", src_tile_h)
+	# Each sprite sheet has a unique layout — define wall & floor regions per world
+	# wall_rect = the dark/solid wall tile region in the sprite sheet
+	# floor_rect = the walkable ground tile region in the sprite sheet
+	var tile_regions = _get_tile_regions_for_theme()
+	var wall_rect: Rect2i = tile_regions.wall
+	var floor_rect: Rect2i = tile_regions.floor
 	
-	# Extract wall tile from row 1, col 0 (dark stone walls)
-	var wall_img = image.get_region(Rect2i(0, src_tile_h, src_tile_w, src_tile_h))
+	print("Level: Extracting wall from ", wall_rect, ", floor from ", floor_rect)
+	
+	# Extract and resize to 32x32
+	var wall_img = image.get_region(wall_rect)
 	wall_img.resize(32, 32, Image.INTERPOLATE_NEAREST)
 	
-	# Extract floor tile from row 0, col 0 (stone floor)
-	var floor_img = image.get_region(Rect2i(0, 0, src_tile_w, src_tile_h))
+	var floor_img = image.get_region(floor_rect)
 	floor_img.resize(32, 32, Image.INTERPOLATE_NEAREST)
 	
 	# Compose a 64x32 atlas image: wall at (0,0), floor at (1,0)
@@ -216,8 +216,54 @@ func _build_tileset_from_texture(texture_path: String) -> TileSet:
 		Vector2(16, 16), Vector2(-16, 16)
 	]))
 
-	print("Level: Built TileSet — wall from row1, floor from row0, source_id=", source_id)
+	print("Level: Built TileSet — source_id=", source_id)
 	return tileset
+
+
+func _get_tile_regions_for_theme() -> Dictionary:
+	"""Return pixel rectangles for wall and floor tiles based on the current theme.
+	Each sprite sheet (1024x1024) has a unique hand-drawn layout, so we specify
+	the exact pixel region for the wall tile (solid obstacle) and floor tile
+	(walkable ground) for each world."""
+	
+	var theme_id = _current_theme.theme_id if _current_theme else 0
+	
+	match theme_id:
+		0: # Prime World — dark stone brick walls (top-right), cracked stone floor (mid-right)
+			return {
+				"wall": Rect2i(615, 0, 200, 130), # Dark brick wall horizontal
+				"floor": Rect2i(615, 165, 200, 165), # Cracked stone floor variations
+			}
+		1: # Verdant Realm — vine-covered walls (top-right), mossy ground (top-left)
+			return {
+				"wall": Rect2i(512, 0, 256, 256), # Vine-covered stone wall
+				"floor": Rect2i(0, 0, 256, 256), # Mossy stone ground
+			}
+		2: # Arid Wastes — adobe walls (top-left structure), sandy floor (row 1 small tiles)
+			return {
+				"wall": Rect2i(0, 0, 400, 300), # Adobe wall structure
+				"floor": Rect2i(0, 340, 170, 170), # Sandy floor with footprints
+			}
+		3: # Crystalline Void — purple crystal walls (row 0), dark crystal floor (row 3)
+			return {
+				"wall": Rect2i(0, 0, 205, 300), # Purple crystal wall
+				"floor": Rect2i(0, 620, 205, 200), # Dark stone floor tile
+			}
+		4: # Ashen Realm — charred beam walls (row 0 right), ash floor (row 1 left)
+			return {
+				"wall": Rect2i(615, 0, 200, 175), # Charred wooden beam wall
+				"floor": Rect2i(0, 195, 205, 195), # Ash-covered floor with ember cracks
+			}
+		5: # Shadow Realm — shadowy mist walls (left rectangles), void floor (row 2)
+			return {
+				"wall": Rect2i(0, 170, 330, 170), # Shadowy mist wall tile
+				"floor": Rect2i(0, 340, 330, 170), # Dark void floor
+			}
+		_: # Fallback
+			return {
+				"wall": Rect2i(0, 0, 200, 200),
+				"floor": Rect2i(200, 0, 200, 200),
+			}
 
 
 func get_player_spawn_position() -> Vector2:
