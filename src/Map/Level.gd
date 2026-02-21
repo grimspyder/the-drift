@@ -139,36 +139,76 @@ func _apply_theme_to_tilemap() -> void:
 	if custom_tileset:
 		tile_map.tile_set = custom_tileset
 		tile_map.clear()
+		# Custom tilesets have their own colors — don't modulate
+		tile_map.modulate = Color.WHITE
 		print("Level: Applied TileSet from: ", png_path)
 	else:
 		push_error("Level: Failed to build tileset from: " + png_path)
-
-	tile_map.modulate = _current_theme.floor_color
+		# Fallback: use modulation for basic tiles
+		tile_map.modulate = _current_theme.floor_color
 
 
 func _build_tileset_from_texture(texture_path: String) -> TileSet:
-	var texture: Texture2D = load(texture_path)
-	if not texture:
-		# PNG not yet imported by Godot — load directly from filesystem
-		var abs_path = ProjectSettings.globalize_path(texture_path)
-		var image = Image.load_from_file(abs_path)
-		if image:
-			texture = ImageTexture.create_from_image(image)
-	if not texture:
+	# Load texture directly from filesystem (bypasses Godot import system)
+	var abs_path = ProjectSettings.globalize_path(texture_path)
+	var image = Image.load_from_file(abs_path)
+	if not image:
+		push_error("Level: Could not load image from: " + abs_path)
+		return null
+	
+	var img_w = image.get_width()
+	var img_h = image.get_height()
+	print("Level: Loaded sprite sheet ", img_w, "x", img_h, " format=", image.get_format(), " from ", abs_path)
+	
+	# Convert to RGBA8 so all image operations use the same format
+	image.convert(Image.FORMAT_RGBA8)
+	
+	# The generated sheets are NxN grids (e.g. 640x640 with 4 columns)
+	# Row 0 = floor variations, Row 1 = wall variations
+	var cols = 4
+	var rows = 4
+	var src_tile_w = img_w / cols
+	var src_tile_h = img_h / rows
+	print("Level: Source tile size: ", src_tile_w, "x", src_tile_h)
+	
+	# Extract wall tile from row 1, col 0 (dark stone walls)
+	var wall_img = image.get_region(Rect2i(0, src_tile_h, src_tile_w, src_tile_h))
+	wall_img.resize(32, 32, Image.INTERPOLATE_NEAREST)
+	
+	# Extract floor tile from row 0, col 0 (stone floor)
+	var floor_img = image.get_region(Rect2i(0, 0, src_tile_w, src_tile_h))
+	floor_img.resize(32, 32, Image.INTERPOLATE_NEAREST)
+	
+	# Compose a 64x32 atlas image: wall at (0,0), floor at (1,0)
+	var atlas_img = Image.create(64, 32, false, Image.FORMAT_RGBA8)
+	atlas_img.blit_rect(wall_img, Rect2i(0, 0, 32, 32), Vector2i(0, 0))
+	atlas_img.blit_rect(floor_img, Rect2i(0, 0, 32, 32), Vector2i(32, 0))
+	
+	var atlas_texture = ImageTexture.create_from_image(atlas_img)
+	if not atlas_texture:
+		push_error("Level: Could not create atlas texture")
 		return null
 
+	# Create TileSet with physics layer
 	var tileset = TileSet.new()
 	tileset.tile_size = Vector2i(32, 32)
 	tileset.add_physics_layer()
 	tileset.set_physics_layer_collision_layer(0, 2)
 	tileset.set_physics_layer_collision_mask(0, 0)
 
+	# Create atlas source from composed 64x32 atlas
 	var source = TileSetAtlasSource.new()
-	source.texture = texture
+	source.texture = atlas_texture
 	source.texture_region_size = Vector2i(32, 32)
 
-	# Wall tile at atlas (0,0) — full-tile collision polygon, matches DungeonGenerator set_cell(…, Vector2i(0,0))
+	# (0,0) = wall, (1,0) = floor — matches DungeonGenerator set_cell calls
 	source.create_tile(Vector2i(0, 0))
+	source.create_tile(Vector2i(1, 0))
+
+	# Add source to tileset first
+	var source_id = tileset.add_source(source)
+
+	# Set collision on wall tile
 	var wall_data: TileData = source.get_tile_data(Vector2i(0, 0), 0)
 	wall_data.set_collision_polygons_count(0, 1)
 	wall_data.set_collision_polygon_points(0, 0, PackedVector2Array([
@@ -176,10 +216,7 @@ func _build_tileset_from_texture(texture_path: String) -> TileSet:
 		Vector2(16, 16), Vector2(-16, 16)
 	]))
 
-	# Floor tile at atlas (1,0) — no collision, matches DungeonGenerator set_cell(…, Vector2i(1,0))
-	source.create_tile(Vector2i(1, 0))
-
-	tileset.add_source(source)
+	print("Level: Built TileSet — wall from row1, floor from row0, source_id=", source_id)
 	return tileset
 
 
