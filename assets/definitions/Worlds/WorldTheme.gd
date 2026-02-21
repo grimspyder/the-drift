@@ -82,6 +82,10 @@ extends Resource
 ## Target room count for this world
 @export var target_room_count: int = 30
 
+## Custom tile set resource path (for custom sprite sheets)
+## Leave empty to use default tiles
+@export var tile_set_path: String = ""
+
 ## Get a formatted difficulty description
 func get_difficulty_description() -> String:
 	if is_easy_mode:
