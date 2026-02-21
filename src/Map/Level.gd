@@ -130,36 +130,57 @@ func apply_theme(theme: WorldTheme) -> void:
 
 
 func _apply_theme_to_tilemap() -> void:
-	"""Apply theme colors to the TileMap"""
 	if not tile_map or not _current_theme:
 		push_error("Level: Cannot apply theme - tile_map or _current_theme is null!")
 		return
-	
-	# Determine which tileset to use
-	var tileset_path = ""
-	
-	# First try: get from theme's tile_set_path property (if it exists and is not empty)
-	if _current_theme.has("tile_set_path") and _current_theme.tile_set_path != "":
-		tileset_path = _current_theme.tile_set_path
-	
-	# Second try: construct default path from theme_id
-	if tileset_path == "":
-		tileset_path = "res://assets/tilesets/world_%d.tres" % _current_theme.theme_id
-	
-	# Try to load and apply the tileset
-	print("Level: Attempting to load tileset from: ", tileset_path)
-	var custom_tileset: TileSet = load(tileset_path)
+
+	var png_path = "res://assets/tilesets/world_%d.jpg" % _current_theme.theme_id
+	var custom_tileset = _build_tileset_from_texture(png_path)
 	if custom_tileset:
 		tile_map.tile_set = custom_tileset
-		# Clear existing tiles and re-apply with new tileset
 		tile_map.clear()
-		print("Level: Successfully applied custom TileSet: ", tileset_path)
+		print("Level: Applied TileSet from: ", png_path)
 	else:
-		print("Level: WARNING - Failed to load tileset from: ", tileset_path)
-	
-	# Always apply floor color modulation
+		push_error("Level: Failed to build tileset from: " + png_path)
+
 	tile_map.modulate = _current_theme.floor_color
-	print("Level: Applied floor color modulation: ", _current_theme.floor_color)
+
+
+func _build_tileset_from_texture(texture_path: String) -> TileSet:
+	var texture: Texture2D = load(texture_path)
+	if not texture:
+		# PNG not yet imported by Godot — load directly from filesystem
+		var abs_path = ProjectSettings.globalize_path(texture_path)
+		var image = Image.load_from_file(abs_path)
+		if image:
+			texture = ImageTexture.create_from_image(image)
+	if not texture:
+		return null
+
+	var tileset = TileSet.new()
+	tileset.tile_size = Vector2i(32, 32)
+	tileset.add_physics_layer()
+	tileset.set_physics_layer_collision_layer(0, 2)
+	tileset.set_physics_layer_collision_mask(0, 0)
+
+	var source = TileSetAtlasSource.new()
+	source.texture = texture
+	source.texture_region_size = Vector2i(32, 32)
+
+	# Wall tile at atlas (0,0) — full-tile collision polygon, matches DungeonGenerator set_cell(…, Vector2i(0,0))
+	source.create_tile(Vector2i(0, 0))
+	var wall_data: TileData = source.get_tile_data(Vector2i(0, 0), 0)
+	wall_data.set_collision_polygons_count(0, 1)
+	wall_data.set_collision_polygon_points(0, 0, PackedVector2Array([
+		Vector2(-16, -16), Vector2(16, -16),
+		Vector2(16, 16), Vector2(-16, 16)
+	]))
+
+	# Floor tile at atlas (1,0) — no collision, matches DungeonGenerator set_cell(…, Vector2i(1,0))
+	source.create_tile(Vector2i(1, 0))
+
+	tileset.add_source(source)
+	return tileset
 
 
 func get_player_spawn_position() -> Vector2:

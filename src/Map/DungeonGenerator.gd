@@ -174,17 +174,17 @@ func apply_theme_settings(theme: Resource) -> void:
 		return
 	
 	# Check if theme has map settings (WorldTheme with map properties)
-	if theme.has("map_width") and theme.has("map_height"):
+	if "map_width" in theme and "map_height" in theme:
 		map_width = theme.map_width
 		map_height = theme.map_height
-	
-	if theme.has("min_room_size"):
+
+	if "min_room_size" in theme:
 		min_room_size = theme.min_room_size
-	
-	if theme.has("max_room_size"):
+
+	if "max_room_size" in theme:
 		max_room_size = theme.max_room_size
-	
-	if theme.has("target_room_count"):
+
+	if "target_room_count" in theme:
 		target_room_count = theme.target_room_count
 	
 	print("DungeonGenerator: Applied theme settings - ",
@@ -593,11 +593,7 @@ func _ready() -> void:
 		push_error("DungeonGenerator: TileMap not found! Please assign tile_map_path or add a TileMap child node.")
 		return
 	
-	# Configure TileMap physics layers for wall collision
-	if _tile_map:
-		_tile_map.collision_layer = 2 # Walls layer
-		_tile_map.collision_mask = 0 # Walls don't collide with anything
-		print("DungeonGenerator: TileMap physics setup - Layer 2, Mask 0")
+	# TileMap physics layers are configured in the TileSet resource (see Level._build_tileset_from_texture)
 	
 	print("DungeonGenerator ready. Map size: ", map_width, "x", map_height)
 	

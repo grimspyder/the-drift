@@ -79,7 +79,7 @@ func _ready() -> void:
 func _update_theme_from_gamemanager() -> void:
 	"""Get the current world ID from GameManager"""
 	var game_manager = get_node_or_null("/root/GameManager")
-	if game_manager and game_manager.has("world_id"):
+	if game_manager and "world_id" in game_manager:
 		_current_theme_id = game_manager.world_id
 		print("EnemySpawner: Current theme ID: ", _current_theme_id)
 

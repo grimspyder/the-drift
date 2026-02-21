@@ -53,7 +53,7 @@ func _setup_collision() -> void:
 	var shape = CircleShape2D.new()
 	shape.radius = 24 # Slightly smaller than tile size
 	collision_shape.shape = shape
-	add_child(collision_shape)
+	add_child.call_deferred(collision_shape)
 
 
 func _create_visuals() -> void:
