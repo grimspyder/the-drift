@@ -29,6 +29,7 @@ func _register_all_themes() -> void:
 	prime.enemy_health_mod = 1.0
 	prime.enemy_damage_mod = 1.0
 	prime.resource_spawn_mod = 1.0
+	prime.tile_set_path = "res://assets/tilesets/world_0.tres"
 	register_theme(prime)
 	
 	# Theme 1: Verdant (green, nature)
@@ -50,6 +51,7 @@ func _register_all_themes() -> void:
 	verdant.hazards = ["spores", "thorns"]
 	verdant.visual_overlay = "sparkles"
 	verdant.is_easy_mode = true
+	verdant.tile_set_path = "res://assets/tilesets/world_1.tres"
 	register_theme(verdant)
 	
 	# Theme 2: Arid (yellow, desert)
@@ -71,6 +73,7 @@ func _register_all_themes() -> void:
 	arid.hazards = ["heat", "sandstorms"]
 	arid.visual_overlay = "heat_haze"
 	arid.is_hard_mode = true
+	arid.tile_set_path = "res://assets/tilesets/world_2.tres"
 	register_theme(arid)
 	
 	# Theme 3: Crystalline (blue, magic)
@@ -92,6 +95,7 @@ func _register_all_themes() -> void:
 	crystalline.hazards = ["arcane_surge", "gravity_wells"]
 	crystalline.visual_overlay = "magic_particles"
 	crystalline.is_hard_mode = true
+	crystalline.tile_set_path = "res://assets/tilesets/world_3.tres"
 	register_theme(crystalline)
 	
 	# Theme 4: Ashen (red/black, fire)
@@ -113,6 +117,7 @@ func _register_all_themes() -> void:
 	ashen.hazards = ["fire", "ember_storm"]
 	ashen.visual_overlay = "embers"
 	ashen.is_hard_mode = true
+	ashen.tile_set_path = "res://assets/tilesets/world_4.tres"
 	register_theme(ashen)
 	
 	# Theme 5: Shadow Realm (purple/black, dark)
@@ -140,6 +145,7 @@ func _register_all_themes() -> void:
 	shadow.min_room_size = 4
 	shadow.max_room_size = 7
 	shadow.target_room_count = 20
+	shadow.tile_set_path = "res://assets/tilesets/world_5.tres"
 	register_theme(shadow)
 	
 	print("WorldThemeDatabase: Registered ", _themes.size(), " world themes")

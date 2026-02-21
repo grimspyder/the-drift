@@ -133,6 +133,13 @@ func _apply_theme_to_tilemap() -> void:
 	if not tile_map or not _current_theme:
 		return
 	
+	# Load custom tileset if provided
+	if "tile_set_path" in _current_theme and _current_theme.tile_set_path != "":
+		var custom_tileset = load(_current_theme.tile_set_path)
+		if custom_tileset is TileSet:
+			tile_map.tile_set = custom_tileset
+			print("Level: Applied custom TileSet ", _current_theme.tile_set_path)
+	
 	# Apply floor color modulation
 	tile_map.modulate = _current_theme.floor_color
 
